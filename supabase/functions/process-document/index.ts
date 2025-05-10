@@ -19,43 +19,114 @@ interface GeminiResponse {
   description: string;
 }
 
-// Simple handler to process preflight requests
-function handleOptions() {
-  return new Response(null, { headers: corsHeaders });
+// Circuit breaker implementation
+let isCircuitBroken = false;
+let consecutiveErrors = 0;
+const CIRCUIT_THRESHOLD = 3;
+
+function resetCircuit() {
+  console.log("Resetting circuit breaker");
+  isCircuitBroken = false;
+  consecutiveErrors = 0;
 }
 
-// Main request handler function with proper error handling
-serve(async (req: Request) => {
+function breakCircuit() {
+  console.log("Circuit breaker activated - temporarily disabling function");
+  isCircuitBroken = true;
+  setTimeout(resetCircuit, 60000); // Reset after 1 minute
+}
+
+// Flat implementation without recursion
+serve(async (req) => {
   console.log("Request received:", req.method, req.url);
+  
+  // Check for circuit breaker
+  if (isCircuitBroken) {
+    console.log("Circuit breaker is active - rejecting request");
+    return new Response(
+      JSON.stringify({ success: false, error: 'Service temporarily unavailable due to errors' }), 
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 503
+      }
+    );
+  }
   
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     console.log("Handling OPTIONS request");
-    return handleOptions();
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  // Process only POST requests
+  if (req.method !== 'POST') {
+    console.log(`Rejecting non-POST request: ${req.method}`);
+    return new Response(
+      JSON.stringify({ success: false, error: 'Method not allowed' }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 405
+      }
+    );
   }
 
   try {
-    // Parse request body
-    const requestData: ProcessDocumentRequest = await req.json();
-    const { record_id, image_url } = requestData;
-    
-    console.log(`Starting to process document with ID: ${record_id} and URL: ${image_url}`);
-    
-    if (!image_url) {
-      throw new Error("No image URL provided");
+    // Parse request body with explicit error handling
+    let requestData: ProcessDocumentRequest;
+    try {
+      requestData = await req.json();
+    } catch (parseError) {
+      console.error("Failed to parse request JSON:", parseError);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Invalid JSON body' }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400
+        }
+      );
     }
 
+    const { record_id, image_url } = requestData;
+    
+    // Input validation
+    if (!record_id || typeof record_id !== 'number') {
+      console.error("Missing or invalid record_id");
+      return new Response(
+        JSON.stringify({ success: false, error: 'Missing or invalid record_id' }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400
+        }
+      );
+    }
+    
+    if (!image_url || typeof image_url !== 'string') {
+      console.error("Missing or invalid image_url");
+      return new Response(
+        JSON.stringify({ success: false, error: 'Missing or invalid image_url' }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400
+        }
+      );
+    }
+    
+    console.log(`Processing document with ID: ${record_id} and URL: ${image_url}`);
+    
     // Create Supabase client
     const supabaseUrl = "https://rkjqdxywsdikcywxggde.supabase.co";
     const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJranFkeHl3c2Rpa2N5d3hnZ2RlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY4NzIwOTAsImV4cCI6MjA2MjQ0ODA5MH0.mR6mCEhgr_K_WEoZ2v_5j8AdG1jxh3pp1Nk7A4mKx44";
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-    // Fetch the image (with timeout)
+    // STEP 1: Fetch the image with timeout
     console.log("Fetching image from URL:", image_url);
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    let imageBase64: string;
+    let mimeType: string;
     
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
       const imageResponse = await fetch(image_url, { signal: controller.signal });
       clearTimeout(timeoutId);
       
@@ -65,15 +136,21 @@ serve(async (req: Request) => {
       
       // Convert image to base64
       const imageBlob = await imageResponse.blob();
+      
+      // Check if the image is too large
+      if (imageBlob.size > 10 * 1024 * 1024) { // 10MB limit
+        throw new Error(`Image too large: ${Math.round(imageBlob.size / 1024 / 1024)}MB (max 10MB)`);
+      }
+      
       const imageArrayBuffer = await imageBlob.arrayBuffer();
-      const imageBase64 = btoa(
+      imageBase64 = btoa(
         String.fromCharCode(...new Uint8Array(imageArrayBuffer))
       );
       
       console.log(`Successfully fetched and encoded image (${Math.round(imageArrayBuffer.byteLength / 1024)} KB)`);
 
       // Determine MIME type from URL or default to image/jpeg
-      const mimeType = (() => {
+      mimeType = (() => {
         const extension = image_url.split('.').pop()?.toLowerCase();
         switch (extension) {
           case 'png': return 'image/png';
@@ -84,23 +161,69 @@ serve(async (req: Request) => {
           default: return 'image/jpeg';
         }
       })();
+    } catch (imageError) {
+      console.error("Error fetching image:", imageError);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: `Failed to fetch or process image: ${imageError.message}` 
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 500
+        }
+      );
+    }
 
-      // Call Google Gemini API
-      console.log("Calling Gemini API for image analysis");
-      const geminiResult = await callGeminiAPI(imageBase64, mimeType);
+    // STEP 2: Call Gemini API with retries
+    console.log("Calling Gemini API for image analysis");
+    let geminiResult: GeminiResponse;
+    
+    try {
+      geminiResult = await callGeminiAPI(imageBase64, mimeType);
       console.log("Gemini API result:", geminiResult);
+      
+      if (!geminiResult || typeof geminiResult !== 'object') {
+        throw new Error("Invalid response structure from Gemini API");
+      }
+      
+      if (!geminiResult.type || !geminiResult.description) {
+        console.warn("Gemini API returned incomplete data:", geminiResult);
+        // Provide default values if missing
+        geminiResult = {
+          type: geminiResult.type || "Unknown document",
+          description: geminiResult.description || "No description available"
+        };
+      }
+    } catch (geminiError) {
+      console.error("Error calling Gemini API:", geminiError);
+      
+      // Increment consecutive errors and check circuit breaker
+      consecutiveErrors++;
+      if (consecutiveErrors >= CIRCUIT_THRESHOLD) {
+        breakCircuit();
+      }
+      
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: `Failed to analyze document with Gemini API: ${geminiError.message}` 
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 500
+        }
+      );
+    }
 
-      // Extract type and description
-      const documentType = geminiResult.type;
-      const documentDescription = geminiResult.description;
-
-      // Update the database record
-      console.log(`Updating database record ${record_id} with type: ${documentType}`);
+    // STEP 3: Update database
+    console.log(`Updating database record ${record_id} with type: ${geminiResult.type}`);
+    try {
       const { error: updateError } = await supabase
         .from('documents_and_images')
         .update({ 
-          type: documentType,
-          llm_output: { description: documentDescription }
+          type: geminiResult.type,
+          llm_output: { description: geminiResult.description }
         })
         .eq('id', record_id);
 
@@ -108,27 +231,45 @@ serve(async (req: Request) => {
         console.error("Database update error:", updateError);
         throw new Error(`Failed to update database record: ${updateError.message}`);
       }
-
-      console.log(`Successfully processed document ID: ${record_id}`);
-      
-      // Return success response
+    } catch (dbError) {
+      console.error("Error updating database:", dbError);
       return new Response(
         JSON.stringify({ 
-          success: true, 
-          message: "Document processed successfully",
-          type: documentType
+          success: false, 
+          error: `Failed to update database: ${dbError.message}` 
         }),
-        { 
+        {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 200 
+          status: 500
         }
       );
-    } finally {
-      // Ensure timeout is cleared even if fetch fails
-      clearTimeout(timeoutId);
     }
+
+    // Success path - reset consecutive errors
+    consecutiveErrors = 0;
+    
+    console.log(`Successfully processed document ID: ${record_id}`);
+    
+    // Return success response
+    return new Response(
+      JSON.stringify({ 
+        success: true, 
+        message: "Document processed successfully",
+        type: geminiResult.type
+      }),
+      { 
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200 
+      }
+    );
   } catch (error) {
-    console.error("Error processing document:", error);
+    // Increment consecutive errors and check circuit breaker
+    consecutiveErrors++;
+    if (consecutiveErrors >= CIRCUIT_THRESHOLD) {
+      breakCircuit();
+    }
+    
+    console.error("Unhandled error processing document:", error);
     
     // More detailed error logging
     if (error instanceof Error) {
@@ -151,7 +292,7 @@ serve(async (req: Request) => {
   }
 });
 
-// Function to call the Gemini API with retry and timeout
+// Non-recursive implementation with explicit error handling and retry logic
 async function callGeminiAPI(base64Image: string, mimeType: string): Promise<GeminiResponse> {
   const GOOGLE_API_KEY = Deno.env.get("GOOGLE_API_KEY");
   if (!GOOGLE_API_KEY) {
@@ -225,50 +366,77 @@ async function callGeminiAPI(base64Image: string, mimeType: string): Promise<Gem
         }
 
         console.log("Raw text content:", textContent.substring(0, 100) + "...");
-
-        // Try to extract JSON from the response with multiple fallback methods
-        let parsedJson;
         
-        // Method 1: Try direct JSON parsing
-        try {
-          parsedJson = JSON.parse(textContent);
-        } catch (e) {
-          console.log("Direct JSON parsing failed, trying to extract from markdown");
-          
-          // Method 2: Try to extract from markdown code blocks
-          const jsonMatch = textContent.match(/```(?:json)?\s*(\{.*?\})\s*```/s) || 
-                           textContent.match(/(\{.*\})/s);
-          
-          if (jsonMatch) {
+        // Try to parse JSON using all methods, with iteration instead of recursion
+        let parsedJson = null;
+        let parsingMethods = [
+          // Method 1: Direct JSON parsing
+          () => {
             try {
-              parsedJson = JSON.parse(jsonMatch[1]);
-            } catch (e2) {
-              console.log("JSON extraction from markdown failed:", e2);
-              throw new Error("Failed to parse JSON from Gemini response");
+              return JSON.parse(textContent);
+            } catch (e) {
+              console.log("Direct JSON parsing failed:", e);
+              return null;
             }
-          } else {
-            // Method 3: Try to extract any JSON-like structure
-            const possibleJson = textContent.match(/\{[^]*\}/);
-            if (possibleJson) {
-              try {
-                parsedJson = JSON.parse(possibleJson[0]);
-              } catch (e3) {
-                console.log("JSON extraction from text failed:", e3);
-                throw new Error("Failed to extract valid JSON from Gemini response");
+          },
+          
+          // Method 2: Extract from markdown code blocks
+          () => {
+            try {
+              const jsonMatch = textContent.match(/```(?:json)?\s*(\{.*?\})\s*```/s) || 
+                               textContent.match(/(\{.*\})/s);
+              return jsonMatch ? JSON.parse(jsonMatch[1]) : null;
+            } catch (e) {
+              console.log("JSON extraction from markdown failed:", e);
+              return null;
+            }
+          },
+          
+          // Method 3: Extract any JSON-like structure
+          () => {
+            try {
+              const possibleJson = textContent.match(/\{[^]*\}/);
+              return possibleJson ? JSON.parse(possibleJson[0]) : null;
+            } catch (e) {
+              console.log("JSON extraction from text failed:", e);
+              return null;
+            }
+          },
+          
+          // Method 4: Basic fallback with regex extraction
+          () => {
+            try {
+              const typeMatch = textContent.match(/["']type["']\s*:\s*["']([^"']+)["']/);
+              const descMatch = textContent.match(/["']description["']\s*:\s*["']([^"']+)["']/);
+              
+              if (typeMatch || descMatch) {
+                return {
+                  type: typeMatch ? typeMatch[1] : "Unknown",
+                  description: descMatch ? descMatch[1] : "No description available"
+                };
               }
-            } else {
-              throw new Error("No JSON structure found in Gemini response");
+              return null;
+            } catch (e) {
+              console.log("Regex extraction failed:", e);
+              return null;
             }
           }
+        ];
+        
+        // Try each parsing method in sequence
+        for (const method of parsingMethods) {
+          parsedJson = method();
+          if (parsedJson) break;
         }
         
-        // Validate the parsed JSON has the expected fields
+        // If all parsing methods failed
+        if (!parsedJson) {
+          throw new Error("Failed to extract valid JSON from Gemini response");
+        }
+        
         console.log("Parsed JSON:", parsedJson);
         
-        if (!parsedJson || typeof parsedJson !== 'object') {
-          throw new Error("Invalid JSON structure in Gemini response");
-        }
-        
+        // Return the parsed response
         return {
           type: parsedJson.type || "Unknown",
           description: parsedJson.description || "No description available"
