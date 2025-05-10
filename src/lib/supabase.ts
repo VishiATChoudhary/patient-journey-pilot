@@ -1,11 +1,19 @@
 
 import { supabase } from "@/integrations/supabase/client";
 
-// Document upload function
-export async function uploadDocument(file: File, patientId = 1) {
+// Document upload function with retry limit and unique filename generation
+export async function uploadDocument(file: File, patientId = 1, retryCount = 0) {
   try {
+    // Limit retries to prevent infinite loops
+    if (retryCount >= 3) {
+      console.error("Maximum retry count reached");
+      return { success: false, error: "Maximum retry count reached" };
+    }
+    
     const fileExt = file.name.split('.').pop();
-    const fileName = `${patientId}/${Date.now()}.${fileExt}`;
+    // Make filename more unique by adding retry count and random string
+    const uniqueId = `${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
+    const fileName = `${patientId}/${uniqueId}.${fileExt}`;
     const filePath = `${fileName}`;
     
     // Upload file to storage bucket 'images'
@@ -45,9 +53,9 @@ export async function uploadDocument(file: File, patientId = 1) {
       if (error.code === '23505') {
         console.error("Duplicate key error - attempting with different timestamp");
         
-        // If it's a duplicate key error, try again with a slightly different timestamp
-        // This is a fallback in case multiple documents are uploaded at the exact same millisecond
-        return await uploadDocument(file, patientId);
+        // If it's a duplicate key error, try again with increased retry count
+        // This prevents infinite recursion while still allowing for retries
+        return await uploadDocument(file, patientId, retryCount + 1);
       }
       
       console.error("Database error:", error);
