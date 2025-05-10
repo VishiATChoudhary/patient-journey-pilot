@@ -29,7 +29,7 @@ export async function uploadDocument(file: File, patientId = 1) {
     const publicUrl = urlData.publicUrl;
     
     // Insert record into documents_and_images table without specifying document_id
-    // This will let the database auto-generate the primary key
+    // Let Supabase auto-generate the primary key
     const { data, error } = await supabase
       .from('documents_and_images')
       .insert([
@@ -41,6 +41,15 @@ export async function uploadDocument(file: File, patientId = 1) {
       .select();
       
     if (error) {
+      // Check if this is a duplicate key error
+      if (error.code === '23505') {
+        console.error("Duplicate key error - attempting with different timestamp");
+        
+        // If it's a duplicate key error, try again with a slightly different timestamp
+        // This is a fallback in case multiple documents are uploaded at the exact same millisecond
+        return await uploadDocument(file, patientId);
+      }
+      
       console.error("Database error:", error);
       throw error;
     }
