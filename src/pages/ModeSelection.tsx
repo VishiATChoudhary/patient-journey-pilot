@@ -14,8 +14,8 @@ const ModeSelection: React.FC = () => {
     setMode(mode);
     
     if (mode === "accessibility") {
-      toast.info("Fine Wine Aged Mode activated. Some features are limited.");
-      // Stay on home page for accessibility mode
+      toast.info("Fine Wine Aged Mode activated.");
+      navigate("/accessibility-mode");
     } else {
       navigate("/upload");
     }
