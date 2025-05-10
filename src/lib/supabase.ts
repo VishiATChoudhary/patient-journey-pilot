@@ -1,4 +1,5 @@
 
+
 import { supabase } from "@/integrations/supabase/client";
 
 // Document upload function with retry limit and unique filename generation
@@ -80,3 +81,4 @@ export async function uploadDocument(file: File, patientId: string | null = null
     return { success: false, error };
   }
 }
+

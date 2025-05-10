@@ -1,4 +1,5 @@
 
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -34,6 +35,29 @@ function breakCircuit() {
   console.log("Circuit breaker activated - temporarily disabling function");
   isCircuitBroken = true;
   setTimeout(resetCircuit, 60000); // Reset after 1 minute
+}
+
+// Database retry mechanism
+async function retryDatabaseOperation(operation, maxRetries = 3, delayMs = 1000) {
+  let lastError = null;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`Database operation attempt ${attempt}/${maxRetries}`);
+      return await operation();
+    } catch (error) {
+      console.warn(`Database operation failed (attempt ${attempt}/${maxRetries}):`, error.message);
+      lastError = error;
+      
+      if (attempt < maxRetries) {
+        const backoffDelay = delayMs * Math.pow(2, attempt - 1); // Exponential backoff
+        console.log(`Retrying in ${backoffDelay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, backoffDelay));
+      }
+    }
+  }
+  
+  throw lastError || new Error("Database operation failed after multiple retries");
 }
 
 // Completely flat implementation without recursion
@@ -117,6 +141,32 @@ serve(async (req) => {
     const supabaseUrl = "https://rkjqdxywsdikcywxggde.supabase.co";
     const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJranFkeHl3c2Rpa2N5d3hnZ2RlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY4NzIwOTAsImV4cCI6MjA2MjQ0ODA5MH0.mR6mCEhgr_K_WEoZ2v_5j8AdG1jxh3pp1Nk7A4mKx44";
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+    // Verify database connection first
+    try {
+      console.log("Verifying database connection...");
+      const { data, error } = await supabase
+        .from('documents_and_images')
+        .select('id')
+        .limit(1);
+      
+      if (error) {
+        throw new Error(`Database connection test failed: ${error.message}`);
+      }
+      console.log("Database connection verified successfully");
+    } catch (connError) {
+      console.error("Database connection failed:", connError);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: `Database connection error: ${connError.message}` 
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 500
+        }
+      );
+    }
 
     // STEP 1: Fetch the image with timeout - REWRITTEN TO AVOID RECURSION
     console.log("Fetching image from URL:", image_url);
@@ -234,7 +284,7 @@ serve(async (req) => {
       );
     }
 
-    // STEP 3: Update database - FIXED DATA MAPPING
+    // STEP 3: Update database with improved error handling and verification
     console.log(`Updating database record ${record_id} with type: ${geminiResult.type}`);
     try {
       // Properly structure the data for the database
@@ -245,17 +295,42 @@ serve(async (req) => {
       
       console.log("Database update payload:", updateData);
       
-      const { error: updateError } = await supabase
-        .from('documents_and_images')
-        .update(updateData)
-        .eq('id', record_id);
-
-      if (updateError) {
-        console.error("Database update error:", updateError);
-        throw new Error(`Failed to update database record: ${updateError.message}`);
-      }
+      // Use retry logic for database operation
+      const updateResult = await retryDatabaseOperation(async () => {
+        const { data, error } = await supabase
+          .from('documents_and_images')
+          .update(updateData)
+          .eq('id', record_id)
+          .select();
+          
+        if (error) {
+          throw new Error(`Database update error: ${error.message}`);
+        }
+        
+        return data;
+      });
       
       console.log(`Successfully updated database record ${record_id}`);
+      
+      // Verify the update actually happened
+      console.log(`Verifying database update for record ${record_id}...`);
+      const { data: verifyData, error: verifyError } = await supabase
+        .from('documents_and_images')
+        .select('type, llm_output')
+        .eq('id', record_id)
+        .single();
+        
+      if (verifyError) {
+        console.error(`Verification failed for record ${record_id}:`, verifyError);
+        throw new Error(`Update verification failed: ${verifyError.message}`);
+      }
+      
+      console.log(`Verification result for record ${record_id}:`, verifyData);
+      
+      // Check if the data was updated correctly
+      if (verifyData.type !== geminiResult.type) {
+        console.warn(`Type mismatch in verification: expected "${geminiResult.type}", got "${verifyData.type}"`);
+      }
     } catch (dbError) {
       console.error("Error updating database:", dbError);
       return new Response(
@@ -481,3 +556,4 @@ async function callGeminiAPIFlat(base64Image: string, mimeType: string): Promise
   // If we've exhausted all retries
   throw lastError || new Error("Failed to get valid response from Gemini API after multiple attempts");
 }
+
