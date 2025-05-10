@@ -19,94 +19,75 @@ interface GeminiResponse {
   description: string;
 }
 
-// Regular HTTP handler - avoiding nested serve functions
-async function handleRequest(req: Request): Promise<Response> {
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+// Simple handler to process preflight requests
+function handleOptions() {
+  return new Response(null, { headers: corsHeaders });
+}
+
+// Main function to process documents
+async function processDocument(record_id: number, image_url: string): Promise<Response> {
+  console.log(`Processing document with ID: ${record_id} and URL: ${image_url}`);
+  
+  if (!image_url) {
+    throw new Error("No image URL provided");
   }
 
-  try {
-    // Parse request body
-    const requestData: ProcessDocumentRequest = await req.json();
-    const { record_id, image_url } = requestData;
+  // Create Supabase client
+  const supabaseUrl = "https://rkjqdxywsdikcywxggde.supabase.co";
+  const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJranFkeHl3c2Rpa2N5d3hnZ2RlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY4NzIwOTAsImV4cCI6MjA2MjQ0ODA5MH0.mR6mCEhgr_K_WEoZ2v_5j8AdG1jxh3pp1Nk7A4mKx44";
+  const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-    console.log(`Processing document with ID: ${record_id} and URL: ${image_url}`);
-
-    if (!image_url) {
-      throw new Error("No image URL provided");
-    }
-
-    // Create Supabase client
-    const supabaseUrl = "https://rkjqdxywsdikcywxggde.supabase.co";
-    const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJranFkeHl3c2Rpa2N5d3hnZ2RlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY4NzIwOTAsImV4cCI6MjA2MjQ0ODA5MH0.mR6mCEhgr_K_WEoZ2v_5j8AdG1jxh3pp1Nk7A4mKx44";
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-    // Get the image content
-    const imageResponse = await fetch(image_url);
-    if (!imageResponse.ok) {
-      throw new Error(`Failed to fetch image: ${imageResponse.statusText}`);
-    }
-
-    // Convert image to base64
-    const imageBlob = await imageResponse.blob();
-    const imageArrayBuffer = await imageBlob.arrayBuffer();
-    const imageBase64 = btoa(
-      String.fromCharCode(...new Uint8Array(imageArrayBuffer))
-    );
-
-    // Determine MIME type from URL or default to image/jpeg
-    const mimeType = determineMimeType(image_url);
-
-    // Call Google Gemini API
-    const result = await analyzeImageWithGemini(imageBase64, mimeType);
-    console.log("Gemini API result:", result);
-
-    // Extract type and description
-    const documentType = result.type;
-    const documentDescription = result.description;
-
-    // Update the database record
-    const { error: updateError } = await supabase
-      .from('documents_and_images')
-      .update({ 
-        type: documentType,
-        llm_output: { description: documentDescription }
-      })
-      .eq('id', record_id);
-
-    if (updateError) {
-      throw new Error(`Failed to update database record: ${updateError.message}`);
-    }
-
-    console.log(`Successfully processed document ID: ${record_id}`);
-    
-    // Return success response
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: "Document processed successfully",
-        type: documentType
-      }),
-      { 
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200 
-      }
-    );
-  } catch (error) {
-    console.error("Error processing document:", error);
-    
-    return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: error.message || "Failed to process document" 
-      }),
-      { 
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 500 
-      }
-    );
+  // Get the image content
+  const imageResponse = await fetch(image_url);
+  if (!imageResponse.ok) {
+    throw new Error(`Failed to fetch image: ${imageResponse.statusText}`);
   }
+
+  // Convert image to base64
+  const imageBlob = await imageResponse.blob();
+  const imageArrayBuffer = await imageBlob.arrayBuffer();
+  const imageBase64 = btoa(
+    String.fromCharCode(...new Uint8Array(imageArrayBuffer))
+  );
+
+  // Determine MIME type from URL or default to image/jpeg
+  const mimeType = determineMimeType(image_url);
+
+  // Call Google Gemini API
+  const result = await analyzeImageWithGemini(imageBase64, mimeType);
+  console.log("Gemini API result:", result);
+
+  // Extract type and description
+  const documentType = result.type;
+  const documentDescription = result.description;
+
+  // Update the database record
+  const { error: updateError } = await supabase
+    .from('documents_and_images')
+    .update({ 
+      type: documentType,
+      llm_output: { description: documentDescription }
+    })
+    .eq('id', record_id);
+
+  if (updateError) {
+    throw new Error(`Failed to update database record: ${updateError.message}`);
+  }
+
+  console.log(`Successfully processed document ID: ${record_id}`);
+  
+  // Return success response
+  return new Response(
+    JSON.stringify({ 
+      success: true, 
+      message: "Document processed successfully",
+      type: documentType
+    }),
+    { 
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 200 
+    }
+  );
 }
 
 // Function to determine MIME type from URL
@@ -173,7 +154,7 @@ async function analyzeImageWithGemini(base64Image: string, mimeType: string): Pr
     const data = await response.json();
     
     // Extract JSON content from response
-    let textContent = data.candidates[0]?.content?.parts?.[0]?.text;
+    let textContent = data.candidates?.[0]?.content?.parts?.[0]?.text;
     
     if (!textContent) {
       throw new Error("No text content in Gemini response");
@@ -204,5 +185,32 @@ async function analyzeImageWithGemini(base64Image: string, mimeType: string): Pr
   }
 }
 
-// Use serve() with the handleRequest function directly - avoiding nested functions
-serve(handleRequest);
+// Main request handler function with proper error handling
+serve(async (req: Request) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return handleOptions();
+  }
+
+  try {
+    // Parse request body
+    const requestData: ProcessDocumentRequest = await req.json();
+    const { record_id, image_url } = requestData;
+    
+    // Process the document
+    return await processDocument(record_id, image_url);
+  } catch (error) {
+    console.error("Error processing document:", error);
+    
+    return new Response(
+      JSON.stringify({ 
+        success: false, 
+        error: error.message || "Failed to process document" 
+      }),
+      { 
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500 
+      }
+    );
+  }
+});
