@@ -76,44 +76,9 @@
   filter: blur(3px);
 }
 
-/* Three.js Wine Simulation styles */
-#wine-glass-simulation {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 1;
-  opacity: 0;
-  transition: opacity 0.5s ease;
-}
-
-/* Canvas element inside the container */
-#wine-glass-simulation canvas {
-  width: 100% !important;
-  height: 100% !important;
-  display: block;
-}
-
 /* Make sure all elements inside the wine button container behave properly */
 .wine-button-container {
   position: relative;
   overflow: hidden;
   border-radius: 0.375rem; /* Match rounded-md */
-}
-
-/* WebGL warning display */
-.webgl-warning {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #666;
-  font-size: 0.8rem;
-  background-color: rgba(0, 0, 0, 0.05);
-  z-index: 2;
 }

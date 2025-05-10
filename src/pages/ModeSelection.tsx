@@ -10,9 +10,7 @@ import { useWineGlassSimulation } from "@/hooks/useWineGlassSimulation";
 const ModeSelection: React.FC = () => {
   const navigate = useNavigate();
   const { setMode } = useAppContext();
-  const [isWineButtonHovered, setIsWineButtonHovered] = useState(false);
-  const wineGlassSimulationId = "wine-glass-simulation";
-  const { containerRef, isReady, setHovered, isMobile } = useWineGlassSimulation(wineGlassSimulationId);
+  const { containerRef, isMobile } = useWineGlassSimulation("wine-glass-simulation");
   
   const handleModeSelection = (mode: "standard" | "accessibility") => {
     setMode(mode);
@@ -23,16 +21,6 @@ const ModeSelection: React.FC = () => {
     } else {
       navigate("/upload");
     }
-  };
-
-  const handleWineButtonMouseEnter = () => {
-    setIsWineButtonHovered(true);
-    setHovered(true);
-  };
-
-  const handleWineButtonMouseLeave = () => {
-    setIsWineButtonHovered(false);
-    setHovered(false);
   };
   
   return (
@@ -61,169 +49,141 @@ const ModeSelection: React.FC = () => {
             <div 
               className="wine-button-container w-full h-14 relative mt-2 overflow-hidden"
               ref={containerRef}
-              onMouseEnter={handleWineButtonMouseEnter}
-              onMouseLeave={handleWineButtonMouseLeave}
             >
-              {/* Three.js container - only visible on desktop */}
-              {!isMobile && (
-                <div 
-                  id={wineGlassSimulationId}
-                  className="absolute inset-0 w-full h-full z-0"
-                  style={{ opacity: isReady ? 1 : 0, transition: 'opacity 0.5s ease' }}
-                ></div>
-              )}
-              
-              {/* Fallback CSS animation for mobile or when WebGL fails */}
-              {(isMobile || !isReady) && (
-                <button
-                  onClick={() => handleModeSelection("accessibility")}
-                  className="wine-button group w-full h-full border border-uber-gray-300 bg-white text-uber-black rounded-md flex items-center justify-center gap-3 overflow-hidden relative z-10"
-                  aria-label="Continue in Fine Wine Aged Mode"
-                >
-                  {/* Wine Glass SVG Container */}
-                  <div className="wine-glass-container absolute inset-0 w-full h-full pointer-events-none">
-                    {/* Wine Glass Shape - More realistic glass shape */}
-                    <svg 
-                      viewBox="0 0 100 100" 
-                      preserveAspectRatio="none" 
-                      className="absolute inset-0 w-full h-full pointer-events-none opacity-20"
-                    >
-                      {/* Stem and Base */}
+              <button
+                onClick={() => handleModeSelection("accessibility")}
+                className="wine-button group w-full h-full border border-uber-gray-300 bg-white text-uber-black rounded-md flex items-center justify-center gap-3 overflow-hidden relative z-10"
+                aria-label="Continue in Fine Wine Aged Mode"
+              >
+                {/* Wine Glass SVG Container */}
+                <div className="wine-glass-container absolute inset-0 w-full h-full pointer-events-none">
+                  {/* Wine Glass Shape - More realistic glass shape */}
+                  <svg 
+                    viewBox="0 0 100 100" 
+                    preserveAspectRatio="none" 
+                    className="absolute inset-0 w-full h-full pointer-events-none opacity-20"
+                  >
+                    {/* Stem and Base */}
+                    <path 
+                      d="M50,95 C50,95 47,90 47,88 L47,75 C47,75 42,73 40,65 C38,57 40,50 40,50 L40,30 C35,20 35,15 50,15 C65,15 65,20 60,30 L60,50 C60,50 62,57 60,65 C58,73 53,75 53,75 L53,88 C53,90 50,95 50,95 Z" 
+                      fill="none" 
+                      stroke="#1A1F2C" 
+                      strokeWidth="0.8"
+                      className="wine-glass-path"
+                    />
+                    
+                    {/* Glass Reflections - subtle light reflection */}
+                    <path 
+                      d="M42,25 Q41,40 43,50" 
+                      fill="none" 
+                      stroke="#ffffff" 
+                      strokeWidth="0.5" 
+                      strokeOpacity="0.5"
+                      className="glass-highlight"
+                    />
+                    
+                    <path 
+                      d="M58,25 Q59,40 57,50" 
+                      fill="none" 
+                      stroke="#ffffff" 
+                      strokeWidth="0.5" 
+                      strokeOpacity="0.5"
+                      className="glass-highlight"
+                    />
+                  </svg>
+                </div>
+
+                {/* Liquid Container with Advanced Clipping */}
+                <div className="wine-liquid-container absolute inset-0 w-full h-full overflow-hidden pointer-events-none">
+                  {/* Base Liquid Fill Layer */}
+                  <div className="wine-liquid absolute bottom-0 left-0 right-0 bg-gradient-to-t from-[#5a0417] to-[#8e0c25] h-0 group-hover:h-[65%] transition-all duration-[2.5s] ease-liquid"></div>
+                  
+                  {/* Wine Legs Effect - Side Drips */}
+                  <div className="wine-legs-left absolute left-[40%] bottom-0 w-[1px] h-0 bg-gradient-to-t from-[#8e0c25] to-[#8e0c2500] opacity-0 group-hover:h-[55%] group-hover:opacity-80 transition-all delay-[2.7s] duration-[3s]"></div>
+                  
+                  <div className="wine-legs-right absolute left-[60%] bottom-0 w-[1px] h-0 bg-gradient-to-t from-[#8e0c25] to-[#8e0c2500] opacity-0 group-hover:h-[60%] group-hover:opacity-80 transition-all delay-[2.5s] duration-[3.2s]"></div>
+                  
+                  {/* Additional wine legs with different timings */}
+                  <div className="wine-legs-extra1 absolute left-[45%] bottom-0 w-[2px] h-0 bg-gradient-to-t from-[#8e0c25] to-[#8e0c2500] opacity-0 group-hover:h-[48%] group-hover:opacity-60 transition-all delay-[2.9s] duration-[3.5s]"></div>
+                  
+                  <div className="wine-legs-extra2 absolute left-[55%] bottom-0 w-[2px] h-0 bg-gradient-to-t from-[#8e0c25] to-[#8e0c2500] opacity-0 group-hover:h-[52%] group-hover:opacity-70 transition-all delay-[3.1s] duration-[3.3s]"></div>
+                  
+                  {/* Multi-layered Wave Effects */}
+                  <div className="wine-wave-1 absolute bottom-0 left-0 right-0 w-full">
+                    <svg viewBox="0 0 1200 120" preserveAspectRatio="none" className="w-[300%] h-4 opacity-70">
                       <path 
-                        d="M50,95 C50,95 47,90 47,88 L47,75 C47,75 42,73 40,65 C38,57 40,50 40,50 L40,30 C35,20 35,15 50,15 C65,15 65,20 60,30 L60,50 C60,50 62,57 60,65 C58,73 53,75 53,75 L53,88 C53,90 50,95 50,95 Z" 
-                        fill="none" 
-                        stroke="#1A1F2C" 
-                        strokeWidth="0.8"
-                        className="wine-glass-path"
-                      />
-                      
-                      {/* Glass Reflections - subtle light reflection */}
-                      <path 
-                        d="M42,25 Q41,40 43,50" 
-                        fill="none" 
-                        stroke="#ffffff" 
-                        strokeWidth="0.5" 
-                        strokeOpacity="0.5"
-                        className="glass-highlight"
-                      />
-                      
-                      <path 
-                        d="M58,25 Q59,40 57,50" 
-                        fill="none" 
-                        stroke="#ffffff" 
-                        strokeWidth="0.5" 
-                        strokeOpacity="0.5"
-                        className="glass-highlight"
-                      />
+                        d="M0,24 C300,72 600,-24 900,24 C1200,72 1500,-24 1800,24 L1800,120 L0,120 Z" 
+                        fill="url(#wine-gradient-1)"
+                      ></path>
+                      <defs>
+                        <linearGradient id="wine-gradient-1" x1="0%" y1="0%" x2="0%" y2="100%">
+                          <stop offset="0%" stopColor="#8e0c25" stopOpacity="0.9" />
+                          <stop offset="100%" stopColor="#5a0417" stopOpacity="0.95" />
+                        </linearGradient>
+                      </defs>
                     </svg>
                   </div>
-
-                  {/* Liquid Container with Advanced Clipping */}
-                  <div className="wine-liquid-container absolute inset-0 w-full h-full overflow-hidden pointer-events-none">
-                    {/* Base Liquid Fill Layer */}
-                    <div className="wine-liquid absolute bottom-0 left-0 right-0 bg-gradient-to-t from-[#5a0417] to-[#8e0c25] h-0 group-hover:h-[65%] transition-all duration-[2.5s] ease-liquid"></div>
-                    
-                    {/* Wine Legs Effect - Side Drips */}
-                    <div className="wine-legs-left absolute left-[40%] bottom-0 w-[1px] h-0 bg-gradient-to-t from-[#8e0c25] to-[#8e0c2500] opacity-0 group-hover:h-[55%] group-hover:opacity-80 transition-all delay-[2.7s] duration-[3s]"></div>
-                    
-                    <div className="wine-legs-right absolute left-[60%] bottom-0 w-[1px] h-0 bg-gradient-to-t from-[#8e0c25] to-[#8e0c2500] opacity-0 group-hover:h-[60%] group-hover:opacity-80 transition-all delay-[2.5s] duration-[3.2s]"></div>
-                    
-                    {/* Additional wine legs with different timings */}
-                    <div className="wine-legs-extra1 absolute left-[45%] bottom-0 w-[2px] h-0 bg-gradient-to-t from-[#8e0c25] to-[#8e0c2500] opacity-0 group-hover:h-[48%] group-hover:opacity-60 transition-all delay-[2.9s] duration-[3.5s]"></div>
-                    
-                    <div className="wine-legs-extra2 absolute left-[55%] bottom-0 w-[2px] h-0 bg-gradient-to-t from-[#8e0c25] to-[#8e0c2500] opacity-0 group-hover:h-[52%] group-hover:opacity-70 transition-all delay-[3.1s] duration-[3.3s]"></div>
-                    
-                    {/* Multi-layered Wave Effects */}
-                    <div className="wine-wave-1 absolute bottom-0 left-0 right-0 w-full">
-                      <svg viewBox="0 0 1200 120" preserveAspectRatio="none" className="w-[300%] h-4 opacity-70">
-                        <path 
-                          d="M0,24 C300,72 600,-24 900,24 C1200,72 1500,-24 1800,24 L1800,120 L0,120 Z" 
-                          fill="url(#wine-gradient-1)"
-                        ></path>
-                        <defs>
-                          <linearGradient id="wine-gradient-1" x1="0%" y1="0%" x2="0%" y2="100%">
-                            <stop offset="0%" stopColor="#8e0c25" stopOpacity="0.9" />
-                            <stop offset="100%" stopColor="#5a0417" stopOpacity="0.95" />
-                          </linearGradient>
-                        </defs>
-                      </svg>
-                    </div>
-                    
-                    {/* Second Wave Layer - Different pattern */}
-                    <div className="wine-wave-2 absolute bottom-0 left-0 right-0 w-full">
-                      <svg viewBox="0 0 1200 120" preserveAspectRatio="none" className="w-[300%] h-6 opacity-50">
-                        <path 
-                          d="M0,84 C300,30 600,114 900,84 C1200,54 1500,90 1800,84 L1800,120 L0,120 Z" 
-                          fill="url(#wine-gradient-2)"
-                        ></path>
-                        <defs>
-                          <linearGradient id="wine-gradient-2" x1="0%" y1="0%" x2="0%" y2="100%">
-                            <stop offset="0%" stopColor="#bf1a36" stopOpacity="0.85" />
-                            <stop offset="100%" stopColor="#8e0c25" stopOpacity="0.9" />
-                          </linearGradient>
-                        </defs>
-                      </svg>
-                    </div>
-                    
-                    {/* Third Wave Layer - Subtle ripples */}
-                    <div className="wine-wave-3 absolute bottom-0 left-0 right-0 w-full">
-                      <svg viewBox="0 0 1200 120" preserveAspectRatio="none" className="w-[400%] h-3 opacity-40">
-                        <path 
-                          d="M0,60 C200,40 400,80 600,60 C800,40 1000,70 1200,60 L1200,120 L0,120 Z" 
-                          fill="url(#wine-gradient-3)"
-                        ></path>
-                        <defs>
-                          <linearGradient id="wine-gradient-3" x1="0%" y1="0%" x2="0%" y2="100%">
-                            <stop offset="0%" stopColor="#d82a4a" stopOpacity="0.7" />
-                            <stop offset="100%" stopColor="#bf1a36" stopOpacity="0.75" />
-                          </linearGradient>
-                        </defs>
-                      </svg>
-                    </div>
-                    
-                    {/* Enhanced Bubble Animation Container */}
-                    <div className="bubbles-container absolute bottom-0 left-0 right-0 h-full opacity-0 group-hover:opacity-100 transition-opacity delay-300">
-                      {/* Multiple bubbles with varied sizes, positions and timings */}
-                      <div className="bubble bubble-1"></div>
-                      <div className="bubble bubble-2"></div>
-                      <div className="bubble bubble-3"></div>
-                      <div className="bubble bubble-4"></div>
-                      <div className="bubble bubble-5"></div>
-                      <div className="bubble bubble-6"></div>
-                      <div className="bubble bubble-7"></div>
-                      <div className="bubble bubble-8"></div>
-                      <div className="bubble bubble-9"></div>
-                      <div className="bubble bubble-10"></div>
-                    </div>
-
-                    {/* Light Refraction Effects */}
-                    <div className="wine-surface-light absolute top-[35%] left-[30%] w-[40%] h-[1px] bg-white opacity-0 group-hover:opacity-40 rotate-[-5deg] blur-[2px] transition-all duration-[2.5s] delay-[2.4s]"></div>
-                    <div className="wine-light-beam absolute bottom-0 left-[45%] w-[10%] h-0 group-hover:h-[50%] bg-gradient-to-t from-[#8e0c2500] via-[#ff456730] to-[#8e0c2500] opacity-0 group-hover:opacity-20 transition-all duration-[2s] delay-[2.6s] blur-[3px]"></div>
-                    <div className="wine-reflection absolute top-0 left-0 w-0 h-full opacity-0 bg-gradient-to-br from-white to-transparent group-hover:w-full group-hover:opacity-10 transition-all duration-[2.5s] ease-out"></div>
-                    <div className="wine-splash absolute top-[35%] left-[40%] w-[20%] h-[1px] bg-gradient-to-r from-transparent via-[#8e0c25] to-transparent scale-x-0 group-hover:scale-x-100 opacity-0 group-hover:opacity-60 group-hover:h-[2px] transition-all duration-[0.3s] delay-[0.1s]"></div>
+                  
+                  {/* Second Wave Layer - Different pattern */}
+                  <div className="wine-wave-2 absolute bottom-0 left-0 right-0 w-full">
+                    <svg viewBox="0 0 1200 120" preserveAspectRatio="none" className="w-[300%] h-6 opacity-50">
+                      <path 
+                        d="M0,84 C300,30 600,114 900,84 C1200,54 1500,90 1800,84 L1800,120 L0,120 Z" 
+                        fill="url(#wine-gradient-2)"
+                      ></path>
+                      <defs>
+                        <linearGradient id="wine-gradient-2" x1="0%" y1="0%" x2="0%" y2="100%">
+                          <stop offset="0%" stopColor="#bf1a36" stopOpacity="0.85" />
+                          <stop offset="100%" stopColor="#8e0c25" stopOpacity="0.9" />
+                        </linearGradient>
+                      </defs>
+                    </svg>
+                  </div>
+                  
+                  {/* Third Wave Layer - Subtle ripples */}
+                  <div className="wine-wave-3 absolute bottom-0 left-0 right-0 w-full">
+                    <svg viewBox="0 0 1200 120" preserveAspectRatio="none" className="w-[400%] h-3 opacity-40">
+                      <path 
+                        d="M0,60 C200,40 400,80 600,60 C800,40 1000,70 1200,60 L1200,120 L0,120 Z" 
+                        fill="url(#wine-gradient-3)"
+                      ></path>
+                      <defs>
+                        <linearGradient id="wine-gradient-3" x1="0%" y1="0%" x2="0%" y2="100%">
+                          <stop offset="0%" stopColor="#d82a4a" stopOpacity="0.7" />
+                          <stop offset="100%" stopColor="#bf1a36" stopOpacity="0.75" />
+                        </linearGradient>
+                      </defs>
+                    </svg>
+                  </div>
+                  
+                  {/* Enhanced Bubble Animation Container */}
+                  <div className="bubbles-container absolute bottom-0 left-0 right-0 h-full opacity-0 group-hover:opacity-100 transition-opacity delay-300">
+                    {/* Multiple bubbles with varied sizes, positions and timings */}
+                    <div className="bubble bubble-1"></div>
+                    <div className="bubble bubble-2"></div>
+                    <div className="bubble bubble-3"></div>
+                    <div className="bubble bubble-4"></div>
+                    <div className="bubble bubble-5"></div>
+                    <div className="bubble bubble-6"></div>
+                    <div className="bubble bubble-7"></div>
+                    <div className="bubble bubble-8"></div>
+                    <div className="bubble bubble-9"></div>
+                    <div className="bubble bubble-10"></div>
                   </div>
 
-                  {/* Button Text Content */}
-                  <div className="wine-contents flex items-center justify-center gap-3 relative z-10 w-full h-full group-hover:text-white transition-colors duration-[2.5s]">
-                    <Wine size={20} className="wine-icon transition-transform duration-1000 group-hover:rotate-[-15deg]" />
-                    <span className="font-medium">Continue in Fine Wine Aged Mode</span>
-                  </div>
-                </button>
-              )}
-              
-              {/* Button that overlays the Three.js scene for desktop */}
-              {!isMobile && isReady && (
-                <button
-                  onClick={() => handleModeSelection("accessibility")}
-                  className="absolute inset-0 w-full h-full border border-uber-gray-300 bg-transparent rounded-md flex items-center justify-center gap-3 z-20"
-                  aria-label="Continue in Fine Wine Aged Mode"
-                >
-                  <div className={`flex items-center justify-center gap-3 transition-colors duration-500 ${isWineButtonHovered ? 'text-white' : 'text-uber-black'}`}>
-                    <Wine size={20} className={`transition-transform duration-1000 ${isWineButtonHovered ? 'rotate-[-15deg]' : ''}`} />
-                    <span className="font-medium">Continue in Fine Wine Aged Mode</span>
-                  </div>
-                </button>
-              )}
+                  {/* Light Refraction Effects */}
+                  <div className="wine-surface-light absolute top-[35%] left-[30%] w-[40%] h-[1px] bg-white opacity-0 group-hover:opacity-40 rotate-[-5deg] blur-[2px] transition-all duration-[2.5s] delay-[2.4s]"></div>
+                  <div className="wine-light-beam absolute bottom-0 left-[45%] w-[10%] h-0 group-hover:h-[50%] bg-gradient-to-t from-[#8e0c2500] via-[#ff456730] to-[#8e0c2500] opacity-0 group-hover:opacity-20 transition-all duration-[2s] delay-[2.6s] blur-[3px]"></div>
+                  <div className="wine-reflection absolute top-0 left-0 w-0 h-full opacity-0 bg-gradient-to-br from-white to-transparent group-hover:w-full group-hover:opacity-10 transition-all duration-[2.5s] ease-out"></div>
+                  <div className="wine-splash absolute top-[35%] left-[40%] w-[20%] h-[1px] bg-gradient-to-r from-transparent via-[#8e0c25] to-transparent scale-x-0 group-hover:scale-x-100 opacity-0 group-hover:opacity-60 group-hover:h-[2px] transition-all duration-[0.3s] delay-[0.1s]"></div>
+                </div>
+
+                {/* Button Text Content */}
+                <div className="wine-contents flex items-center justify-center gap-3 relative z-10 w-full h-full group-hover:text-white transition-colors duration-[2.5s]">
+                  <Wine size={20} className="wine-icon transition-transform duration-1000 group-hover:rotate-[-15deg]" />
+                  <span className="font-medium">Continue in Fine Wine Aged Mode</span>
+                </div>
+              </button>
             </div>
             
             <div className="relative py-6">
