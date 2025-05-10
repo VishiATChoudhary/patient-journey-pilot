@@ -1,8 +1,8 @@
-
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import { useAppContext } from "@/context/AppContext";
+import { useAuth } from "@/context/AuthContext";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -38,6 +38,7 @@ type PatientFormValues = z.infer<typeof patientFormSchema>;
 
 const NewPatient: React.FC = () => {
   const { mode } = useAppContext();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   // Initialize the form
@@ -65,6 +66,11 @@ const NewPatient: React.FC = () => {
 
   async function onSubmit(data: PatientFormValues) {
     try {
+      if (!user) {
+        toast.error("You must be logged in to create a patient");
+        return;
+      }
+
       // Insert patient data into Supabase
       const { data: patientData, error } = await supabase
         .from("patients")

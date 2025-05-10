@@ -1,13 +1,14 @@
-
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import { useAppContext } from "@/context/AppContext";
+import { useAuth } from "@/context/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Phone, Mail, MapPin, Calendar, Heart, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import { toast } from "sonner";
 
 interface Patient {
   id: string;
@@ -30,13 +31,14 @@ interface Patient {
 const PatientDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { mode } = useAppContext();
+  const { user } = useAuth();
   const [patient, setPatient] = useState<Patient | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
     async function fetchPatientDetails() {
-      if (!id) return;
+      if (!id || !user) return;
       
       try {
         const { data, error } = await supabase
@@ -49,13 +51,14 @@ const PatientDetail: React.FC = () => {
         setPatient(data);
       } catch (error) {
         console.error("Error fetching patient details:", error);
+        toast.error("Error fetching patient details");
       } finally {
         setIsLoading(false);
       }
     }
 
     fetchPatientDetails();
-  }, [id]);
+  }, [id, user]);
 
   const getGenderLabel = (gender: number) => {
     const genders = ["Female", "Male", "Non-binary", "Other"];

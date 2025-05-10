@@ -7,8 +7,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
 import { useAppContext } from "@/context/AppContext";
+import { useAuth } from "@/context/AuthContext";
 import { User, UserPlus } from "lucide-react";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import { toast } from "sonner";
 
 interface Patient {
   id: string;
@@ -21,12 +23,15 @@ interface Patient {
 
 const Patients: React.FC = () => {
   const { mode } = useAppContext();
+  const { user } = useAuth();
   const [patients, setPatients] = useState<Patient[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
     async function fetchPatients() {
+      if (!user) return;
+      
       try {
         const { data, error } = await supabase
           .from("patients")
@@ -37,13 +42,14 @@ const Patients: React.FC = () => {
         setPatients(data || []);
       } catch (error) {
         console.error("Error fetching patients:", error);
+        toast.error("Error fetching patients");
       } finally {
         setIsLoading(false);
       }
     }
 
     fetchPatients();
-  }, []);
+  }, [user]);
 
   return (
     <div className={`min-h-screen bg-uber-gray-50 flex flex-col ${mode === "accessibility" ? "accessibility-mode" : ""}`}>
