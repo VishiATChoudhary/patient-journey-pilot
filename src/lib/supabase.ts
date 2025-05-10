@@ -2,7 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
 // Document upload function with retry limit and unique filename generation
-export async function uploadDocument(file: File, patientId = 1, retryCount = 0) {
+export async function uploadDocument(file: File, patientId = "00000000-0000-0000-0000-000000000000", retryCount = 0) {
   try {
     // Limit retries to prevent infinite loops
     if (retryCount >= 3) {
@@ -43,7 +43,7 @@ export async function uploadDocument(file: File, patientId = 1, retryCount = 0) 
         { 
           patient_id: patientId,
           raw_input: publicUrl,
-          display_name: file.name // Store the original filename in the new display_name column
+          display_name: file.name // Store the original filename in the display_name column
         }
       ])
       .select();

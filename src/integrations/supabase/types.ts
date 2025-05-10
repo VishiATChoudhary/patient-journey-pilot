@@ -13,27 +13,27 @@ export type Database = {
         Row: {
           created_at: string
           display_name: string | null
-          document_id: number
+          id: number
           llm_output: Json | null
-          patient_id: number | null
+          patient_id: string | null
           raw_input: string | null
           type: string | null
         }
         Insert: {
           created_at?: string
           display_name?: string | null
-          document_id?: number
+          id?: number
           llm_output?: Json | null
-          patient_id?: number | null
+          patient_id?: string | null
           raw_input?: string | null
           type?: string | null
         }
         Update: {
           created_at?: string
           display_name?: string | null
-          document_id?: number
+          id?: number
           llm_output?: Json | null
-          patient_id?: number | null
+          patient_id?: string | null
           raw_input?: string | null
           type?: string | null
         }
@@ -43,7 +43,7 @@ export type Database = {
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
-            referencedColumns: ["patient_id"]
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -54,13 +54,13 @@ export type Database = {
           country: string | null
           created_at: string
           email: string | null
-          family_ids: number[] | null
+          family_ids: string[] | null
           gender: number | null
           height: number | null
+          id: string
           insurance_number: number | null
           insurance_provider: string | null
           name: string | null
-          patient_id: number
           phone: string | null
           plz: number | null
           street: string | null
@@ -73,13 +73,13 @@ export type Database = {
           country?: string | null
           created_at?: string
           email?: string | null
-          family_ids?: number[] | null
+          family_ids?: string[] | null
           gender?: number | null
           height?: number | null
+          id?: string
           insurance_number?: number | null
           insurance_provider?: string | null
           name?: string | null
-          patient_id?: number
           phone?: string | null
           plz?: number | null
           street?: string | null
@@ -92,13 +92,13 @@ export type Database = {
           country?: string | null
           created_at?: string
           email?: string | null
-          family_ids?: number[] | null
+          family_ids?: string[] | null
           gender?: number | null
           height?: number | null
+          id?: string
           insurance_number?: number | null
           insurance_provider?: string | null
           name?: string | null
-          patient_id?: number
           phone?: string | null
           plz?: number | null
           street?: string | null

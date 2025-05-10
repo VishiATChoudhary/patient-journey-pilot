@@ -18,6 +18,9 @@ const DocumentUpload: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   
+  // Default patientId as a UUID string instead of a number
+  const patientId = "00000000-0000-0000-0000-000000000000";
+  
   // If in accessibility mode, redirect to home
   React.useEffect(() => {
     if (mode === "accessibility") {
@@ -62,7 +65,7 @@ const DocumentUpload: React.FC = () => {
     
     try {
       for (const file of files) {
-        const result = await uploadDocument(file);
+        const result = await uploadDocument(file, patientId);
         if (result.success) {
           const documentObj: Document = {
             id: Date.now().toString(),
