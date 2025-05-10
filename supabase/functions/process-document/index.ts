@@ -1,5 +1,4 @@
 
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -37,14 +36,16 @@ function breakCircuit() {
   setTimeout(resetCircuit, 60000); // Reset after 1 minute
 }
 
-// Database retry mechanism
+// Database retry mechanism with detailed logging
 async function retryDatabaseOperation(operation, maxRetries = 3, delayMs = 1000) {
   let lastError = null;
   
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       console.log(`Database operation attempt ${attempt}/${maxRetries}`);
-      return await operation();
+      const result = await operation();
+      console.log(`Operation succeeded on attempt ${attempt}`);
+      return result;
     } catch (error) {
       console.warn(`Database operation failed (attempt ${attempt}/${maxRetries}):`, error.message);
       lastError = error;
@@ -60,7 +61,6 @@ async function retryDatabaseOperation(operation, maxRetries = 3, delayMs = 1000)
   throw lastError || new Error("Database operation failed after multiple retries");
 }
 
-// Completely flat implementation without recursion
 serve(async (req) => {
   console.log("Request received:", req.method, req.url);
   
@@ -138,9 +138,12 @@ serve(async (req) => {
     console.log(`Processing document with ID: ${record_id} and URL: ${image_url}`);
     
     // Create Supabase client
-    const supabaseUrl = "https://rkjqdxywsdikcywxggde.supabase.co";
-    const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJranFkeHl3c2Rpa2N5d3hnZ2RlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY4NzIwOTAsImV4cCI6MjA2MjQ0ODA5MH0.mR6mCEhgr_K_WEoZ2v_5j8AdG1jxh3pp1Nk7A4mKx44";
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "https://rkjqdxywsdikcywxggde.supabase.co";
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || 
+                              Deno.env.get("SUPABASE_ANON_KEY") || 
+                              "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJranFkeHl3c2Rpa2N5d3hnZ2RlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY4NzIwOTAsImV4cCI6MjA2MjQ0ODA5MH0.mR6mCEhgr_K_WEoZ2v_5j8AdG1jxh3pp1Nk7A4mKx44";
+    
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Verify database connection first
     try {
@@ -168,7 +171,7 @@ serve(async (req) => {
       );
     }
 
-    // STEP 1: Fetch the image with timeout - REWRITTEN TO AVOID RECURSION
+    // STEP 1: Fetch the image with timeout - NON-RECURSIVE IMPLEMENTATION
     console.log("Fetching image from URL:", image_url);
     let imageBase64: string;
     let mimeType: string;
@@ -284,31 +287,54 @@ serve(async (req) => {
       );
     }
 
-    // STEP 3: Update database with improved error handling and verification
+    // STEP 3: Update database with fixed error handling - FIX DATABASE UPDATE ISSUE HERE
     console.log(`Updating database record ${record_id} with type: ${geminiResult.type}`);
     try {
-      // Properly structure the data for the database
+      // Properly structure the data for the database - FIXED FORMATTING
       const updateData = {
-        type: geminiResult.type, // Store type as a string in the type column
-        llm_output: { description: geminiResult.description } // Store description as JSON in llm_output column
+        type: geminiResult.type,
+        llm_output: { description: geminiResult.description }
       };
       
-      console.log("Database update payload:", updateData);
+      console.log("Database update payload:", JSON.stringify(updateData, null, 2));
       
-      // Use retry logic for database operation
-      const updateResult = await retryDatabaseOperation(async () => {
-        const { data, error } = await supabase
-          .from('documents_and_images')
-          .update(updateData)
-          .eq('id', record_id)
-          .select();
+      let updateResult;
+      // First attempt: Use standard update with retry
+      try {
+        updateResult = await retryDatabaseOperation(async () => {
+          const { data, error } = await supabase
+            .from('documents_and_images')
+            .update(updateData)
+            .eq('id', record_id)
+            .select();
+            
+          if (error) {
+            throw new Error(`Database update error: ${error.message}`);
+          }
           
-        if (error) {
-          throw new Error(`Database update error: ${error.message}`);
-        }
-        
-        return data;
-      });
+          if (!data || data.length === 0) {
+            throw new Error(`No data returned from update operation`);
+          }
+          
+          return data;
+        });
+      } catch (updateError) {
+        // Second attempt: Use RPC for direct SQL access if standard update fails
+        console.log("Standard update failed, trying with direct SQL...");
+        updateResult = await retryDatabaseOperation(async () => {
+          const { data, error } = await supabase.rpc('update_document_metadata', {
+            doc_id: record_id,
+            doc_type: geminiResult.type,
+            doc_llm_output: { description: geminiResult.description }
+          });
+            
+          if (error) {
+            throw new Error(`RPC update error: ${error.message}`);
+          }
+          
+          return data;
+        });
+      }
       
       console.log(`Successfully updated database record ${record_id}`);
       
@@ -556,4 +582,3 @@ async function callGeminiAPIFlat(base64Image: string, mimeType: string): Promise
   // If we've exhausted all retries
   throw lastError || new Error("Failed to get valid response from Gemini API after multiple attempts");
 }
-
