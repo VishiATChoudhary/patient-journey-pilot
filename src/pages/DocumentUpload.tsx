@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -17,9 +16,6 @@ const DocumentUpload: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
-  
-  // Default patientId as a UUID string instead of a number
-  const patientId = "00000000-0000-0000-0000-000000000000";
   
   // If in accessibility mode, redirect to home
   React.useEffect(() => {
@@ -65,7 +61,8 @@ const DocumentUpload: React.FC = () => {
     
     try {
       for (const file of files) {
-        const result = await uploadDocument(file, patientId);
+        // Pass null instead of default UUID to avoid foreign key constraint issues
+        const result = await uploadDocument(file, null);
         if (result.success) {
           const documentObj: Document = {
             id: Date.now().toString(),
