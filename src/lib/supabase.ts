@@ -36,15 +36,14 @@ export async function uploadDocument(file: File, patientId = 1, retryCount = 0) 
       
     const publicUrl = urlData.publicUrl;
     
-    // Insert record into documents_and_images table without specifying document_id
-    // Let Supabase auto-generate the primary key
+    // Insert record into documents_and_images table including display_name
     const { data, error } = await supabase
       .from('documents_and_images')
       .insert([
         { 
           patient_id: patientId,
           raw_input: publicUrl,
-          display_name: file.name // Store the original filename
+          display_name: file.name // Store the original filename in the new display_name column
         }
       ])
       .select();
@@ -55,7 +54,6 @@ export async function uploadDocument(file: File, patientId = 1, retryCount = 0) 
         console.error("Duplicate key error - attempting with different timestamp");
         
         // If it's a duplicate key error, try again with increased retry count
-        // This prevents infinite recursion while still allowing for retries
         return await uploadDocument(file, patientId, retryCount + 1);
       }
       

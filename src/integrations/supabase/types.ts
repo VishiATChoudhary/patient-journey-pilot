@@ -12,6 +12,7 @@ export type Database = {
       documents_and_images: {
         Row: {
           created_at: string
+          display_name: string | null
           document_id: number
           llm_output: Json | null
           patient_id: number | null
@@ -20,6 +21,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          display_name?: string | null
           document_id?: number
           llm_output?: Json | null
           patient_id?: number | null
@@ -28,6 +30,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          display_name?: string | null
           document_id?: number
           llm_output?: Json | null
           patient_id?: number | null
