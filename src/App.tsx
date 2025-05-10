@@ -9,6 +9,8 @@ import ModeSelection from "./pages/ModeSelection";
 import DocumentUpload from "./pages/DocumentUpload";
 import SuccessPage from "./pages/SuccessPage";
 import NewPatient from "./pages/NewPatient";
+import Patients from "./pages/Patients";
+import PatientDetail from "./pages/PatientDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -25,6 +27,8 @@ const App = () => (
             <Route path="/upload" element={<DocumentUpload />} />
             <Route path="/success" element={<SuccessPage />} />
             <Route path="/new-patient" element={<NewPatient />} />
+            <Route path="/patients" element={<Patients />} />
+            <Route path="/patients/:id" element={<PatientDetail />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
