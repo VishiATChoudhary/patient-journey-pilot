@@ -197,16 +197,9 @@ const ModeSelection: React.FC = () => {
                     </div>
 
                     {/* Light Refraction Effects */}
-                    {/* Top surface reflection */}
                     <div className="wine-surface-light absolute top-[35%] left-[30%] w-[40%] h-[1px] bg-white opacity-0 group-hover:opacity-40 rotate-[-5deg] blur-[2px] transition-all duration-[2.5s] delay-[2.4s]"></div>
-                    
-                    {/* Light beam through wine */}
                     <div className="wine-light-beam absolute bottom-0 left-[45%] w-[10%] h-0 group-hover:h-[50%] bg-gradient-to-t from-[#8e0c2500] via-[#ff456730] to-[#8e0c2500] opacity-0 group-hover:opacity-20 transition-all duration-[2s] delay-[2.6s] blur-[3px]"></div>
-                    
-                    {/* Side shine effect */}
                     <div className="wine-reflection absolute top-0 left-0 w-0 h-full opacity-0 bg-gradient-to-br from-white to-transparent group-hover:w-full group-hover:opacity-10 transition-all duration-[2.5s] ease-out"></div>
-                    
-                    {/* Pour splash effect - Appears briefly at the beginning of hover */}
                     <div className="wine-splash absolute top-[35%] left-[40%] w-[20%] h-[1px] bg-gradient-to-r from-transparent via-[#8e0c25] to-transparent scale-x-0 group-hover:scale-x-100 opacity-0 group-hover:opacity-60 group-hover:h-[2px] transition-all duration-[0.3s] delay-[0.1s]"></div>
                   </div>
 

@@ -27,6 +27,11 @@ export class WineGlassSimulation {
   private liquidRipples: THREE.Mesh[] = [];
   private isPouringActive: boolean = false;
   private pourStartTime: number = 0;
+  private liquidShader: THREE.ShaderMaterial | null = null;
+  private causticTexture: THREE.Texture | null = null;
+  private rippleMapRT: THREE.WebGLRenderTarget | null = null;
+  private noiseTexture: THREE.Texture | null = null;
+  private dropPositions: THREE.Vector3[] = [];
   
   constructor(options: WineGlassSimulationOptions) {
     const { containerId, width, height } = options;
@@ -40,16 +45,15 @@ export class WineGlassSimulation {
     // Create scene
     this.scene = new THREE.Scene();
     
-    // Create camera - orthographic for 2D view
-    const aspect = width / height;
-    const frustumSize = 2;
+    // Create camera
     this.camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
     this.camera.position.z = 5;
     
     // Create renderer with alpha transparency
     this.renderer = new THREE.WebGLRenderer({ 
       antialias: true,
-      alpha: true 
+      alpha: true,
+      precision: 'highp'
     });
     this.renderer.setSize(width, height);
     this.renderer.setClearColor(0x000000, 0); // transparent background
@@ -62,10 +66,13 @@ export class WineGlassSimulation {
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
     this.scene.add(ambientLight);
     
-    // Add directional light to create highlights
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    // Add directional light for highlights
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
     directionalLight.position.set(0.5, 1, 2);
     this.scene.add(directionalLight);
+
+    // Create noise texture for ripple effects
+    this.loadNoiseTexture();
 
     // Create button container with liquid
     this.createButtonContainer();
@@ -76,6 +83,27 @@ export class WineGlassSimulation {
     if (options.onReady) {
       options.onReady();
     }
+  }
+
+  private loadNoiseTexture() {
+    const noiseSize = 256;
+    const data = new Uint8Array(noiseSize * noiseSize * 4);
+    
+    for (let i = 0; i < noiseSize * noiseSize * 4; i += 4) {
+      const val = Math.random() * 255;
+      data[i] = val;
+      data[i + 1] = val;
+      data[i + 2] = val;
+      data[i + 3] = 255;
+    }
+    
+    const noiseTexture = new THREE.DataTexture(data, noiseSize, noiseSize);
+    noiseTexture.format = THREE.RGBAFormat;
+    noiseTexture.wrapS = THREE.RepeatWrapping;
+    noiseTexture.wrapT = THREE.RepeatWrapping;
+    noiseTexture.needsUpdate = true;
+    
+    this.noiseTexture = noiseTexture;
   }
 
   private createButtonContainer() {
@@ -96,64 +124,124 @@ export class WineGlassSimulation {
     
     const buttonMesh = new THREE.Mesh(buttonGeometry, buttonMaterial);
     this.scene.add(buttonMesh);
-    
-    // Create liquid mesh (initially empty/flat)
-    // We'll use a box that will grow in height as liquid pours in
-    const liquidGeometry = new THREE.BoxGeometry(buttonWidth - 0.05, 0.01, buttonDepth - 0.05);
-    
-    // Deep burgundy with some transparency
-    const liquidMaterial = new THREE.MeshPhysicalMaterial({
-      color: this.wineColor,
+
+    // Create the liquid shader
+    const liquidShader = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: 0 },
+        uColor: { value: new THREE.Color(this.wineColor) },
+        uLevel: { value: 0.0 },
+        uNoiseTexture: { value: this.noiseTexture },
+        uPouringActive: { value: 0.0 },
+        uRippleStrength: { value: 0.0 }
+      },
+      vertexShader: `
+        varying vec2 vUv;
+        varying vec3 vPosition;
+        uniform float uTime;
+        uniform float uLevel;
+        uniform float uPouringActive;
+        uniform sampler2D uNoiseTexture;
+        uniform float uRippleStrength;
+        
+        void main() {
+          vUv = uv;
+          vPosition = position;
+          
+          // Calculate height based on wave pattern and time
+          float waveX = sin(uv.x * 10.0 + uTime * 2.0) * 0.01;
+          float waveY = cos(uv.y * 8.0 + uTime * 1.7) * 0.01;
+          float wave = waveX + waveY;
+          
+          // Add noise-based ripples
+          vec2 noiseUV = uv * 3.0 + uTime * 0.1;
+          float noise = texture2D(uNoiseTexture, noiseUV).r * 2.0 - 1.0;
+          
+          // Apply ripples only at the top of the liquid level
+          float heightField = position.y + wave * uPouringActive;
+          if (abs(position.y - uLevel * 0.65) < 0.05) {
+            heightField += noise * 0.02 * uRippleStrength * uPouringActive;
+          }
+          
+          // Calculate final position 
+          vec3 newPosition = vec3(position.x, heightField, position.z);
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(newPosition, 1.0);
+        }
+      `,
+      fragmentShader: `
+        varying vec2 vUv;
+        varying vec3 vPosition;
+        uniform vec3 uColor;
+        uniform float uTime;
+        uniform float uLevel;
+        uniform float uPouringActive;
+        uniform sampler2D uNoiseTexture;
+        
+        void main() {
+          // Base color
+          vec3 color = uColor;
+          
+          // Add subtle depth variation based on Y position
+          float depthGradient = smoothstep(-0.35, uLevel * 0.65, vPosition.y);
+          color = mix(color * 0.7, color, depthGradient);
+          
+          // Add highlights at the top surface
+          float surfaceHighlight = smoothstep(uLevel * 0.65 - 0.05, uLevel * 0.65, vPosition.y) * uPouringActive;
+          color = mix(color, vec3(1.0, 0.8, 0.8) * color, surfaceHighlight * 0.3);
+          
+          // Add caustic-like effect using noise
+          vec2 causticUV = vUv * 5.0 + uTime * 0.05;
+          float caustic = texture2D(uNoiseTexture, causticUV).r;
+          causticUV = vUv * 3.0 - uTime * 0.03;
+          caustic *= texture2D(uNoiseTexture, causticUV).r;
+          
+          // Apply caustics more to deeper areas
+          float causticMask = 1.0 - depthGradient;
+          color += vec3(1.0, 0.6, 0.4) * caustic * causticMask * 0.15 * uPouringActive;
+          
+          // Add a subtle rim lighting effect
+          float rim = 1.0 - abs(dot(vec3(0.0, 0.0, 1.0), vec3(0.0, 1.0, 0.0)));
+          color += vec3(1.0, 0.2, 0.3) * rim * 0.1;
+          
+          // Apply final color with some translucency
+          gl_FragColor = vec4(color, 0.85);
+        }
+      `,
       transparent: true,
-      opacity: 0.9,
-      roughness: 0.1,
-      metalness: 0.2,
-      transmission: 0.1,
+      depthWrite: false,
+      side: THREE.DoubleSide
     });
     
-    this.liquidMesh = new THREE.Mesh(liquidGeometry, liquidMaterial);
+    this.liquidShader = liquidShader;
+    
+    // Create liquid mesh (initially empty/flat)
+    // We'll use a plane with subdivisions for the liquid surface
+    const liquidGeometry = new THREE.PlaneGeometry(buttonWidth - 0.05, buttonHeight - 0.05, 32, 16);
+    liquidGeometry.rotateX(-Math.PI / 2); // Make it horizontal
+    
+    this.liquidMesh = new THREE.Mesh(liquidGeometry, liquidShader);
     
     // Position at the bottom of the button
     this.liquidMesh.position.y = -buttonHeight/2 + 0.005; // Slightly above the bottom
+    this.liquidMesh.position.z = 0; // Center in z
     this.scene.add(this.liquidMesh);
     
     // Create pour effect (visible when pouring)
     this.pourEffect = new THREE.Group();
     this.scene.add(this.pourEffect);
     
-    // Create and add ripple pool (for when drops hit the surface)
-    this.createRipplePool();
+    // Pre-generate some drop positions for pour effect
+    this.generateDropPositions();
   }
 
-  private createRipplePool() {
-    // We'll create several ripple circles that we can animate independently
-    for (let i = 0; i < 5; i++) {
-      const rippleGeometry = new THREE.RingGeometry(0.01, 0.03, 32);
-      const rippleMaterial = new THREE.MeshBasicMaterial({ 
-        color: this.wineColor,
-        transparent: true,
-        opacity: 0,
-        side: THREE.DoubleSide
-      });
+  private generateDropPositions() {
+    // Pre-generate some positions for drops
+    for (let i = 0; i < 50; i++) {
+      const x = (Math.random() - 0.5) * 1.8; // Spread across button width
+      const y = Math.random() * 1.5 + 0.5;   // Above the button
+      const z = (Math.random() - 0.5) * 0.2; // Small z variation
       
-      const ripple = new THREE.Mesh(rippleGeometry, rippleMaterial);
-      
-      // Position at the center but hidden initially
-      ripple.position.z = 0.06;
-      ripple.rotation.x = -Math.PI / 2; // Lay flat
-      ripple.visible = false;
-      
-      // Store ripple parameters for animation
-      (ripple as any).params = {
-        active: false,
-        scale: 0,
-        opacity: 0,
-        position: new THREE.Vector2(0, 0),
-        speed: 1 + Math.random() * 0.5
-      };
-      
-      this.liquidRipples.push(ripple);
-      this.scene.add(ripple);
+      this.dropPositions.push(new THREE.Vector3(x, y, z));
     }
   }
 
@@ -184,20 +272,63 @@ export class WineGlassSimulation {
     const curve = new THREE.CubicBezierCurve3(
       new THREE.Vector3(0, pourHeight/2 + 0.5, 0), // Start point above the button
       new THREE.Vector3(0, pourHeight/3 + 0.3, 0), // Control point 1
-      new THREE.Vector3(0, pourHeight/6, 0),       // Control point 2
+      new THREE.Vector3(0, pourHeight/6, 0),       // End point 2
       new THREE.Vector3(0, 0, 0)                   // End point at the button surface
     );
     
     const pourGeometry = new THREE.TubeGeometry(curve, 20, pourWidth * 0.25, 8, false);
-    const pourMaterial = new THREE.MeshPhysicalMaterial({
-      color: this.wineColor,
+    
+    // Create a shader material for the pour stream with animated flow
+    const pourShader = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: 0 },
+        uColor: { value: new THREE.Color(this.wineColor) }
+      },
+      vertexShader: `
+        varying vec2 vUv;
+        varying vec3 vPosition;
+        uniform float uTime;
+        
+        void main() {
+          vUv = uv;
+          vPosition = position;
+          
+          // Add subtle movement to the pour stream
+          float wave = sin(uv.y * 30.0 + uTime * 10.0) * 0.01;
+          vec3 newPosition = position;
+          newPosition.x += wave;
+          
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(newPosition, 1.0);
+        }
+      `,
+      fragmentShader: `
+        varying vec2 vUv;
+        varying vec3 vPosition;
+        uniform vec3 uColor;
+        uniform float uTime;
+        
+        void main() {
+          vec3 color = uColor;
+          
+          // Add flowing animation along the stream
+          float flow = fract(vUv.y - uTime);
+          
+          // Add highlights
+          float highlight = smoothstep(0.3, 0.7, flow) * smoothstep(0.7, 0.3, flow);
+          color = mix(color, color * 1.2, highlight * 0.3);
+          
+          // Add edge highlights
+          float edge = smoothstep(0.0, 0.1, vUv.x) * smoothstep(1.0, 0.9, vUv.x);
+          color = mix(color, color * 1.3, (1.0 - edge) * 0.4);
+          
+          gl_FragColor = vec4(color, 0.85);
+        }
+      `,
       transparent: true,
-      opacity: 0.9,
-      roughness: 0.1,
-      transmission: 0.2,
+      depthWrite: false
     });
     
-    const pourMesh = new THREE.Mesh(pourGeometry, pourMaterial);
+    const pourMesh = new THREE.Mesh(pourGeometry, pourShader);
     this.pourEffect.add(pourMesh);
     
     // Add droplets around the pour point (as particles)
@@ -209,35 +340,78 @@ export class WineGlassSimulation {
   
   private createPourDroplets() {
     // Create particles for small droplets around the pouring stream
-    const dropCount = 30;
+    const dropCount = 50;
     const dropPositions = new Float32Array(dropCount * 3);
     const dropSizes = new Float32Array(dropCount);
+    const dropVelocities = new Float32Array(dropCount * 3);
     
     for (let i = 0; i < dropCount; i++) {
       const i3 = i * 3;
+      const pos = this.dropPositions[i % this.dropPositions.length];
       
-      // Random positions around the pour stream
-      dropPositions[i3] = (Math.random() - 0.5) * 0.2; // x
-      dropPositions[i3 + 1] = Math.random() * 0.5;     // y (above the surface)
-      dropPositions[i3 + 2] = (Math.random() - 0.5) * 0.2; // z
+      // Copy pre-generated positions
+      dropPositions[i3] = pos.x;
+      dropPositions[i3 + 1] = pos.y;
+      dropPositions[i3 + 2] = pos.z;
       
       // Random sizes for droplets
       dropSizes[i] = Math.random() * 3 + 1;
+      
+      // Initial velocities (mostly downward)
+      dropVelocities[i3] = (Math.random() - 0.5) * 0.05;
+      dropVelocities[i3 + 1] = -Math.random() * 0.2 - 0.1;
+      dropVelocities[i3 + 2] = (Math.random() - 0.5) * 0.05;
     }
     
     const dropGeometry = new THREE.BufferGeometry();
     dropGeometry.setAttribute('position', new THREE.BufferAttribute(dropPositions, 3));
     dropGeometry.setAttribute('size', new THREE.BufferAttribute(dropSizes, 1));
     
-    const dropMaterial = new THREE.PointsMaterial({
-      color: this.wineColor,
+    // Store velocities in a separate buffer for animation
+    dropGeometry.setAttribute('velocity', new THREE.BufferAttribute(dropVelocities, 3));
+    
+    // Create a shader material for the droplets
+    const dropShader = new THREE.ShaderMaterial({
+      uniforms: {
+        uColor: { value: new THREE.Color(this.wineColor) },
+        uPixelRatio: { value: window.devicePixelRatio }
+      },
+      vertexShader: `
+        attribute float size;
+        varying vec3 vColor;
+        uniform float uPixelRatio;
+        
+        void main() {
+          vColor = vec3(0.7, 0.1, 0.2);
+          
+          // Calculate size based on perspective
+          vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+          float cameraDist = length(mvPosition.xyz);
+          
+          gl_PointSize = size * uPixelRatio * (300.0 / cameraDist);
+          gl_Position = projectionMatrix * mvPosition;
+        }
+      `,
+      fragmentShader: `
+        varying vec3 vColor;
+        
+        void main() {
+          // Create a circular droplet shape
+          float dist = length(gl_PointCoord - vec2(0.5));
+          if (dist > 0.5) discard;
+          
+          // Add highlight to make it look more like a sphere
+          float highlight = smoothstep(0.5, 0.0, dist);
+          vec3 color = mix(vColor, vec3(1.0), highlight * 0.6);
+          
+          gl_FragColor = vec4(color, smoothstep(0.5, 0.2, dist));
+        }
+      `,
       transparent: true,
-      opacity: 0.7,
-      size: 0.02,
-      sizeAttenuation: true,
+      depthWrite: false
     });
     
-    const droplets = new THREE.Points(dropGeometry, dropMaterial);
+    const droplets = new THREE.Points(dropGeometry, dropShader);
     this.dropsParticles.push(droplets);
     this.pourEffect.add(droplets);
     
@@ -250,6 +424,7 @@ export class WineGlassSimulation {
     const splashCount = 40;
     const splashPositions = new Float32Array(splashCount * 3);
     const splashSizes = new Float32Array(splashCount);
+    const splashVelocities = new Float32Array(splashCount * 3);
     
     for (let i = 0; i < splashCount; i++) {
       const i3 = i * 3;
@@ -260,21 +435,59 @@ export class WineGlassSimulation {
       splashPositions[i3 + 2] = (Math.random() - 0.5) * 0.3; // z - wider spread
       
       splashSizes[i] = Math.random() * 2 + 1;
+      
+      // Initial velocities (mostly outward and upward)
+      const angle = Math.random() * Math.PI * 2;
+      const speed = Math.random() * 0.2 + 0.1;
+      splashVelocities[i3] = Math.cos(angle) * speed;
+      splashVelocities[i3 + 1] = Math.random() * 0.2 + 0.05; // Upward
+      splashVelocities[i3 + 2] = Math.sin(angle) * speed;
     }
     
     const splashGeometry = new THREE.BufferGeometry();
     splashGeometry.setAttribute('position', new THREE.BufferAttribute(splashPositions, 3));
     splashGeometry.setAttribute('size', new THREE.BufferAttribute(splashSizes, 1));
+    splashGeometry.setAttribute('velocity', new THREE.BufferAttribute(splashVelocities, 3));
     
-    const splashMaterial = new THREE.PointsMaterial({
-      color: this.wineColor,
+    // Create a shader material for the splash particles
+    const splashShader = new THREE.ShaderMaterial({
+      uniforms: {
+        uColor: { value: new THREE.Color(this.wineColor) },
+        uPixelRatio: { value: window.devicePixelRatio }
+      },
+      vertexShader: `
+        attribute float size;
+        varying vec3 vColor;
+        uniform float uPixelRatio;
+        
+        void main() {
+          vColor = vec3(0.7, 0.1, 0.2);
+          
+          vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+          float cameraDist = length(mvPosition.xyz);
+          
+          gl_PointSize = size * uPixelRatio * (300.0 / cameraDist);
+          gl_Position = projectionMatrix * mvPosition;
+        }
+      `,
+      fragmentShader: `
+        varying vec3 vColor;
+        
+        void main() {
+          float dist = length(gl_PointCoord - vec2(0.5));
+          if (dist > 0.5) discard;
+          
+          float highlight = smoothstep(0.5, 0.0, dist);
+          vec3 color = mix(vColor, vec3(1.0), highlight * 0.5);
+          
+          gl_FragColor = vec4(color, smoothstep(0.5, 0.3, dist) * 0.8);
+        }
+      `,
       transparent: true,
-      opacity: 0.7,
-      size: 0.015,
-      sizeAttenuation: true,
+      depthWrite: false
     });
     
-    const splash = new THREE.Points(splashGeometry, splashMaterial);
+    const splash = new THREE.Points(splashGeometry, splashShader);
     splash.visible = false; // Hide initially
     (splash as any).lifespan = 0; // For controlling animation
     
@@ -282,60 +495,18 @@ export class WineGlassSimulation {
     this.scene.add(splash);
   }
 
-  private updateRipples(deltaTime: number) {
-    // For each ripple in our pool
-    for (let i = 0; i < this.liquidRipples.length; i++) {
-      const ripple = this.liquidRipples[i];
-      const params = (ripple as any).params;
+  public setHovered(hovered: boolean) {
+    this.hovered = hovered;
+    this.targetLiquidLevel = hovered ? 1.0 : 0.0;
+    
+    if (hovered && !this.isPouringActive) {
+      // Start pouring effect when hovering begins
+      this.isPouringActive = true;
+      this.pourStartTime = this.clock.elapsedTime;
       
-      if (params.active) {
-        // Update size and opacity for active ripples
-        params.scale += deltaTime * params.speed;
-        params.opacity -= deltaTime * 1.2; // Fade out
-        
-        // Apply updates
-        ripple.scale.set(params.scale, params.scale, 1);
-        
-        if (ripple.material instanceof THREE.MeshBasicMaterial) {
-          ripple.material.opacity = Math.max(0, params.opacity);
-        }
-        
-        // Deactivate when completely faded
-        if (params.opacity <= 0) {
-          params.active = false;
-          ripple.visible = false;
-        }
-      }
-    }
-  }
-
-  private triggerRipple(x: number, y: number) {
-    // Find an inactive ripple
-    for (let i = 0; i < this.liquidRipples.length; i++) {
-      const ripple = this.liquidRipples[i];
-      const params = (ripple as any).params;
-      
-      if (!params.active) {
-        // Position at the given coordinates
-        ripple.position.x = x;
-        ripple.position.y = y;
-        ripple.position.z = 0.06; // Slightly above liquid
-        
-        // Activate with initial parameters
-        params.active = true;
-        params.scale = 0.1;
-        params.opacity = 0.7;
-        params.speed = 0.8 + Math.random() * 1.0;
-        
-        // Make visible
-        ripple.visible = true;
-        ripple.scale.set(params.scale, params.scale, 1);
-        
-        if (ripple.material instanceof THREE.MeshBasicMaterial) {
-          ripple.material.opacity = params.opacity;
-        }
-        
-        break;
+      // Create the pour effect if it doesn't exist
+      if (!this.pourEffect || this.pourEffect.children.length === 0) {
+        this.createPourEffect();
       }
     }
   }
@@ -357,7 +528,14 @@ export class WineGlassSimulation {
       return;
     }
     
-    // Update pour effect (e.g., make it wiggle slightly)
+    // Update shader time uniforms for pour effect
+    this.pourEffect.children.forEach(child => {
+      if (child instanceof THREE.Mesh && child.material instanceof THREE.ShaderMaterial) {
+        child.material.uniforms.uTime.value = this.clock.elapsedTime;
+      }
+    });
+    
+    // Update pour effect position (e.g., make it wiggle slightly)
     const wiggleAmount = Math.sin(elapsedTime * 10) * 0.01;
     this.pourEffect.position.x = wiggleAmount;
     
@@ -369,10 +547,11 @@ export class WineGlassSimulation {
       this.triggerSplash();
     }
     
-    // Create ripples at random intervals
-    if (Math.random() < deltaTime * 5) {
-      const x = (Math.random() - 0.5) * 0.3; // Random x position near center
-      this.triggerRipple(x, this.liquidMesh?.position.y ?? 0);
+    // Increase ripple strength when pouring
+    if (this.liquidShader) {
+      // Oscillate ripple strength for more dynamic effect
+      const rippleStrength = 0.5 + Math.sin(elapsedTime * 5) * 0.5;
+      this.liquidShader.uniforms.uRippleStrength.value = rippleStrength;
     }
   }
   
@@ -389,8 +568,8 @@ export class WineGlassSimulation {
     
     // Position the splash at the current liquid level
     if (this.liquidMesh) {
-      splash.position.y = this.liquidMesh.position.y + 0.01;
-      splash.position.x = (Math.random() - 0.5) * 0.2; // Randomize x position a bit
+      splash.position.y = this.liquidLevel * 0.65 - 0.35 + 0.01;
+      splash.position.x = (Math.random() - 0.5) * 1.5; // Randomize x position a bit
     }
     
     // Activate splash
@@ -398,19 +577,27 @@ export class WineGlassSimulation {
     (splash as any).active = true;
     (splash as any).lifespan = 1.0; // Will fade over 1 second
     
-    // If this is a points material, we can randomize the positions for more dynamics
+    // Reset the positions and velocities for a new splash
     if (splash.geometry instanceof THREE.BufferGeometry) {
       const positions = splash.geometry.attributes.position.array as Float32Array;
+      const velocities = splash.geometry.attributes.velocity.array as Float32Array;
+      
       for (let i = 0; i < positions.length; i += 3) {
-        // Update x and z positions with more random spread
-        positions[i] = (Math.random() - 0.5) * 0.4;     // x
-        positions[i + 2] = (Math.random() - 0.5) * 0.4; // z
+        // Center around splash position with slight variation
+        positions[i] = splash.position.x + (Math.random() - 0.5) * 0.2;
+        positions[i + 1] = splash.position.y;
+        positions[i + 2] = (Math.random() - 0.5) * 0.2;
         
-        // y position is small upward velocity
-        positions[i + 1] = Math.random() * 0.15;
+        // Outward and upward velocities
+        const angle = Math.random() * Math.PI * 2;
+        const speed = Math.random() * 0.2 + 0.1;
+        velocities[i] = Math.cos(angle) * speed;
+        velocities[i + 1] = Math.random() * 0.15 + 0.05;
+        velocities[i + 2] = Math.sin(angle) * speed;
       }
       
       splash.geometry.attributes.position.needsUpdate = true;
+      splash.geometry.attributes.velocity.needsUpdate = true;
     }
   }
   
@@ -421,20 +608,30 @@ export class WineGlassSimulation {
       
       if (drops.geometry instanceof THREE.BufferGeometry) {
         const positions = drops.geometry.attributes.position.array as Float32Array;
+        const velocities = drops.geometry.attributes.velocity.array as Float32Array;
         
         for (let j = 0; j < positions.length; j += 3) {
-          // Move droplets downward
-          positions[j + 1] -= deltaTime * (0.5 + Math.random() * 1.0);
+          // Apply velocity to position
+          positions[j] += velocities[j] * deltaTime;
+          positions[j + 1] += velocities[j + 1] * deltaTime;
+          positions[j + 2] += velocities[j + 2] * deltaTime;
           
-          // Add slight horizontal movement
-          positions[j] += (Math.random() - 0.5) * 0.01;
-          positions[j + 2] += (Math.random() - 0.5) * 0.01;
+          // Apply gravity to y velocity
+          velocities[j + 1] -= deltaTime * 0.2; // gravity
           
-          // Reset droplets that go below the surface
-          if (positions[j + 1] < 0) {
-            positions[j] = (Math.random() - 0.5) * 0.2;
-            positions[j + 1] = Math.random() * 0.5 + 0.5; // Reset to above the pour point
-            positions[j + 2] = (Math.random() - 0.5) * 0.2;
+          // Reset droplets that go below the liquid level or out of the area
+          if (positions[j + 1] < this.liquidLevel * 0.65 - 0.35 || 
+              Math.abs(positions[j]) > 2.0 || 
+              Math.abs(positions[j + 2]) > 1.0) {
+            const pos = this.dropPositions[Math.floor(Math.random() * this.dropPositions.length)];
+            positions[j] = pos.x + (Math.random() - 0.5) * 0.1;
+            positions[j + 1] = pos.y;
+            positions[j + 2] = pos.z;
+            
+            // Reset velocity
+            velocities[j] = (Math.random() - 0.5) * 0.05;
+            velocities[j + 1] = -Math.random() * 0.2 - 0.1;
+            velocities[j + 2] = (Math.random() - 0.5) * 0.05;
           }
         }
         
@@ -449,31 +646,27 @@ export class WineGlassSimulation {
       if ((splash as any).active && (splash as any).lifespan > 0) {
         (splash as any).lifespan -= deltaTime * 1.5;
         
-        // Update positions to move particles outward and upward
+        // Update particle positions based on velocities
         if (splash.geometry instanceof THREE.BufferGeometry) {
           const positions = splash.geometry.attributes.position.array as Float32Array;
+          const velocities = splash.geometry.attributes.velocity.array as Float32Array;
           
           for (let j = 0; j < positions.length; j += 3) {
-            // Move particles upward with gravity
-            positions[j + 1] += deltaTime * (0.2 - positions[j + 1] * 2.0); // Slows as it goes up
+            // Apply velocity
+            positions[j] += velocities[j] * deltaTime;
+            positions[j + 1] += velocities[j + 1] * deltaTime;
+            positions[j + 2] += velocities[j + 2] * deltaTime;
             
-            // Move particles outward from center
-            const dirX = positions[j];
-            const dirZ = positions[j + 2];
-            const length = Math.sqrt(dirX * dirX + dirZ * dirZ);
-            
-            if (length > 0) {
-              positions[j] += (dirX / length) * deltaTime * 0.1;
-              positions[j + 2] += (dirZ / length) * deltaTime * 0.1;
-            }
+            // Apply gravity
+            velocities[j + 1] -= deltaTime * 0.3;
           }
           
           splash.geometry.attributes.position.needsUpdate = true;
         }
         
         // Update opacity to fade out
-        if (splash.material instanceof THREE.PointsMaterial) {
-          splash.material.opacity = (splash as any).lifespan * 0.7;
+        if (splash.material instanceof THREE.ShaderMaterial) {
+          splash.material.opacity = (splash as any).lifespan;
         }
         
         // Hide when done
@@ -485,59 +678,32 @@ export class WineGlassSimulation {
     }
   }
 
-  public setHovered(hovered: boolean) {
-    this.hovered = hovered;
-    this.targetLiquidLevel = hovered ? 0.6 : 0;
-    
-    if (hovered && !this.isPouringActive) {
-      // Start pouring effect when hovering begins
-      this.isPouringActive = true;
-      this.pourStartTime = this.clock.elapsedTime;
-      
-      // Create the pour effect if it doesn't exist
-      if (!this.pourEffect || this.pourEffect.children.length === 0) {
-        this.createPourEffect();
-      }
-    }
-  }
-
   private animate() {
     if (this.isDestroyed) return;
     
     const deltaTime = this.clock.getDelta();
+    const elapsedTime = this.clock.elapsedTime;
     
-    // Animate liquid level (filling or emptying)
-    if (this.liquidMesh) {
-      // Calculate current target height based on liquid level (max height is 0.6)
-      const targetHeight = this.targetLiquidLevel * 0.6;
+    // Smooth interpolation for liquid level
+    this.liquidLevel = THREE.MathUtils.lerp(
+      this.liquidLevel, 
+      this.targetLiquidLevel,
+      deltaTime * 2
+    );
+    
+    // Update liquid shader uniforms
+    if (this.liquidShader && this.liquidMesh) {
+      this.liquidShader.uniforms.uTime.value = elapsedTime;
+      this.liquidShader.uniforms.uLevel.value = this.liquidLevel;
+      this.liquidShader.uniforms.uPouringActive.value = this.isPouringActive ? 1.0 : 0.0;
       
-      // Current liquid height (assuming scale.y represents height)
-      const currentHeight = this.liquidMesh.scale.y * this.liquidMesh.geometry.parameters.height;
-      
-      // Smoothly animate the liquid level
-      const newHeight = THREE.MathUtils.lerp(currentHeight, targetHeight, deltaTime * 2);
-      
-      // Update mesh scale to represent new liquid height
-      // We need to update both the scale and position to keep the bottom fixed
-      this.liquidMesh.scale.y = newHeight / this.liquidMesh.geometry.parameters.height;
-      
-      // Update position to keep bottom of liquid fixed
-      const newY = -0.35 + (newHeight / 2); // -0.35 is the bottom of the button
-      this.liquidMesh.position.y = newY;
-      
-      // Add subtle wobbling effect when filling or emptying
-      if (Math.abs(targetHeight - currentHeight) > 0.01) {
-        const wobbleAmount = Math.sin(this.clock.elapsedTime * 10) * 0.008;
-        // Apply subtle wave effect to liquid by adjusting position
-        this.liquidMesh.position.y += wobbleAmount;
-      }
+      // Update liquid position to match filling level
+      // Instead of scaling, we'll keep the mesh flat and move it up
+      this.liquidMesh.position.y = -0.35 + (this.liquidLevel * 0.65);
     }
     
     // Update the pour animation
     this.updatePourAnimation(deltaTime);
-    
-    // Update ripple animations
-    this.updateRipples(deltaTime);
     
     // Render scene
     this.renderer.render(this.scene, this.camera);
@@ -552,6 +718,23 @@ export class WineGlassSimulation {
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(width, height);
+    
+    // Update pixel ratio uniform for particles if present
+    this.dropsParticles.forEach(drops => {
+      if (drops.material instanceof THREE.ShaderMaterial) {
+        if (drops.material.uniforms.uPixelRatio) {
+          drops.material.uniforms.uPixelRatio.value = window.devicePixelRatio;
+        }
+      }
+    });
+    
+    this.splashParticles.forEach(splash => {
+      if (splash.material instanceof THREE.ShaderMaterial) {
+        if (splash.material.uniforms.uPixelRatio) {
+          splash.material.uniforms.uPixelRatio.value = window.devicePixelRatio;
+        }
+      }
+    });
   }
 
   public destroy() {
@@ -586,11 +769,17 @@ export class WineGlassSimulation {
       }
     });
     
+    // Dispose render targets
+    if (this.rippleMapRT) {
+      this.rippleMapRT.dispose();
+    }
+    
     // Clear references
     this.liquidMesh = null;
     this.pourEffect = null;
     this.dropsParticles = [];
     this.splashParticles = [];
     this.liquidRipples = [];
+    this.liquidShader = null;
   }
 }
