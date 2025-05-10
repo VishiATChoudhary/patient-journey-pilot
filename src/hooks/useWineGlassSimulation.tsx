@@ -45,7 +45,7 @@ export const useWineGlassSimulation = (containerId: string) => {
           }
         };
       } catch (error) {
-        console.error("Error initializing wine glass simulation:", error);
+        console.error("Error initializing wine simulation:", error);
         // Fall back to CSS animation
         setIsReady(false);
       }
