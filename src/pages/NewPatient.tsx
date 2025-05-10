@@ -2,7 +2,6 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import { useAppContext } from "@/context/AppContext";
-import { useAuth } from "@/context/AuthContext";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -38,7 +37,6 @@ type PatientFormValues = z.infer<typeof patientFormSchema>;
 
 const NewPatient: React.FC = () => {
   const { mode } = useAppContext();
-  const { user } = useAuth();
   const navigate = useNavigate();
 
   // Initialize the form
