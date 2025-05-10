@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -6,7 +7,7 @@ import { useAppContext, Document } from "@/context/AppContext";
 import { uploadDocument } from "@/lib/supabase";
 import Header from "@/components/Header";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { Upload, X, ImagePlus } from "lucide-react";
+import { Upload, X, ImagePlus, FileText } from "lucide-react";
 import { toast } from "sonner";
 
 const DocumentUpload: React.FC = () => {
@@ -117,18 +118,32 @@ const DocumentUpload: React.FC = () => {
               multiple
             />
             
-            <div className="mb-6">
-              <Button 
-                onClick={triggerFileInput}
-                className="w-full bg-uber-black text-white hover:bg-uber-gray-900 h-14 flex items-center justify-center gap-3 transition-colors"
-                type="button"
-              >
-                <ImagePlus size={22} />
-                Select Documents
-              </Button>
-            </div>
-            
-            {previews.length > 0 && (
+            {previews.length === 0 ? (
+              <div className="mb-6">
+                <div className="border-2 border-dashed border-uber-gray-200 bg-uber-gray-50 rounded-lg p-8 flex flex-col items-center justify-center text-center">
+                  <div className="w-16 h-16 bg-uber-gray-100 rounded-full flex items-center justify-center mb-4">
+                    <FileText size={28} className="text-uber-gray-500" />
+                  </div>
+                  
+                  <h3 className="text-lg font-medium text-uber-gray-800 mb-2">
+                    No documents uploaded
+                  </h3>
+                  
+                  <p className="text-uber-gray-500 mb-6 max-w-xs">
+                    Upload your medical records, prescriptions, or test results to share with your healthcare provider
+                  </p>
+                  
+                  <Button 
+                    onClick={triggerFileInput}
+                    className="bg-uber-black text-white hover:bg-uber-gray-900 h-12 flex items-center justify-center gap-3 transition-colors w-full md:w-auto px-6"
+                    type="button"
+                  >
+                    <ImagePlus size={20} />
+                    Choose Files
+                  </Button>
+                </div>
+              </div>
+            ) : (
               <div className="space-y-4 mb-6">
                 <h3 className="font-medium text-lg">
                   Document Preview
@@ -151,6 +166,18 @@ const DocumentUpload: React.FC = () => {
                       </button>
                     </div>
                   ))}
+                </div>
+
+                <div className="flex justify-center">
+                  <Button 
+                    onClick={triggerFileInput}
+                    className="bg-uber-gray-100 text-uber-black hover:bg-uber-gray-200 h-12 flex items-center justify-center gap-3 transition-colors"
+                    type="button"
+                    variant="outline"
+                  >
+                    <ImagePlus size={20} />
+                    Add More Files
+                  </Button>
                 </div>
               </div>
             )}
