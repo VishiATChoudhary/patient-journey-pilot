@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { User, Calendar, Phone, Mail, MapPin, Heart } from "lucide-react";
+import { User, Calendar, Phone, Mail, MapPin, Heart, Shield } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -92,7 +92,7 @@ const NewPatient: React.FC = () => {
 
       toast.success("Patient created successfully");
       
-      // Navigate to patient detail (we'll add this route later)
+      // Navigate to patient detail
       if (patientData && patientData[0]) {
         navigate(`/patients/${patientData[0].id}`);
       } else {
@@ -109,26 +109,29 @@ const NewPatient: React.FC = () => {
       <Header title="Create New Patient" showBackButton />
       
       <main className="flex-grow p-4 pb-20">
-        <div className="w-full max-w-lg mx-auto">
-          <Card className="p-6 bg-white border-0 shadow-sm rounded-lg">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-12 h-12 bg-uber-black rounded-full flex items-center justify-center">
-                <User size={24} className="text-white" />
-              </div>
-              <div>
-                <h2 className={`font-semibold text-uber-black ${mode === "accessibility" ? "text-2xl" : "text-xl"}`}>
-                  New Patient Registration
-                </h2>
-                <p className="text-uber-gray-500 text-sm mt-1">Enter patient details</p>
+        <div className="w-full max-w-2xl mx-auto">
+          <Card className="p-6 bg-white border-0 shadow-sm rounded-lg overflow-hidden">
+            {/* Header with gradient */}
+            <div className="relative bg-uber-black p-6 -mx-6 -mt-6 mb-6 shadow-sm">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-full bg-white flex items-center justify-center">
+                  <User size={26} className="text-uber-black" />
+                </div>
+                <div>
+                  <h2 className={`font-bold text-white ${mode === "accessibility" ? "text-2xl" : "text-xl"}`}>
+                    New Patient Registration
+                  </h2>
+                  <p className="text-uber-gray-200 text-sm mt-1">Enter patient information below</p>
+                </div>
               </div>
             </div>
             
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
                 {/* Personal Information */}
-                <div className="bg-uber-gray-50 p-4 rounded-lg border border-uber-gray-100">
-                  <h3 className="font-medium text-lg mb-4 flex items-center gap-2">
-                    <User size={18} className="text-uber-gray-600" />
+                <div className="bg-uber-gray-50 p-5 rounded-lg border border-uber-gray-100">
+                  <h3 className="font-medium text-lg mb-4 flex items-center gap-2 text-uber-black">
+                    <User size={18} className="text-uber-black" />
                     Personal Information
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -137,11 +140,15 @@ const NewPatient: React.FC = () => {
                       name="name"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>First Name</FormLabel>
+                          <FormLabel className="text-uber-gray-600">First Name</FormLabel>
                           <FormControl>
-                            <Input placeholder="First name" {...field} />
+                            <Input 
+                              placeholder="First name" 
+                              {...field} 
+                              className="border-uber-gray-300 focus:border-uber-black focus:ring-uber-black h-12"
+                            />
                           </FormControl>
-                          <FormMessage />
+                          <FormMessage className="text-uber-red" />
                         </FormItem>
                       )}
                     />
@@ -150,11 +157,15 @@ const NewPatient: React.FC = () => {
                       name="surname"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Last Name</FormLabel>
+                          <FormLabel className="text-uber-gray-600">Last Name</FormLabel>
                           <FormControl>
-                            <Input placeholder="Last name" {...field} />
+                            <Input 
+                              placeholder="Last name" 
+                              {...field} 
+                              className="border-uber-gray-300 focus:border-uber-black focus:ring-uber-black h-12"
+                            />
                           </FormControl>
-                          <FormMessage />
+                          <FormMessage className="text-uber-red" />
                         </FormItem>
                       )}
                     />
@@ -163,14 +174,18 @@ const NewPatient: React.FC = () => {
                       name="birthdate"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Date of Birth</FormLabel>
+                          <FormLabel className="text-uber-gray-600">Date of Birth</FormLabel>
                           <FormControl>
                             <div className="flex items-center">
-                              <Calendar size={16} className="mr-2 text-uber-gray-500" />
-                              <Input type="date" {...field} />
+                              <Calendar size={16} className="absolute ml-3 text-uber-gray-500 pointer-events-none" />
+                              <Input 
+                                type="date" 
+                                {...field} 
+                                className="pl-10 border-uber-gray-300 focus:border-uber-black focus:ring-uber-black h-12" 
+                              />
                             </div>
                           </FormControl>
-                          <FormMessage />
+                          <FormMessage className="text-uber-red" />
                         </FormItem>
                       )}
                     />
@@ -179,13 +194,13 @@ const NewPatient: React.FC = () => {
                       name="gender"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Gender</FormLabel>
+                          <FormLabel className="text-uber-gray-600">Gender</FormLabel>
                           <Select
                             onValueChange={(value) => field.onChange(parseInt(value))}
                             defaultValue={field.value?.toString()}
                           >
                             <FormControl>
-                              <SelectTrigger>
+                              <SelectTrigger className="border-uber-gray-300 focus:ring-uber-black h-12">
                                 <SelectValue placeholder="Select gender" />
                               </SelectTrigger>
                             </FormControl>
@@ -196,7 +211,7 @@ const NewPatient: React.FC = () => {
                               <SelectItem value="3">Other</SelectItem>
                             </SelectContent>
                           </Select>
-                          <FormMessage />
+                          <FormMessage className="text-uber-red" />
                         </FormItem>
                       )}
                     />
@@ -204,9 +219,9 @@ const NewPatient: React.FC = () => {
                 </div>
 
                 {/* Contact Information */}
-                <div className="bg-uber-gray-50 p-4 rounded-lg border border-uber-gray-100">
-                  <h3 className="font-medium text-lg mb-4 flex items-center gap-2">
-                    <Phone size={18} className="text-uber-gray-600" />
+                <div className="bg-uber-gray-50 p-5 rounded-lg border border-uber-gray-100">
+                  <h3 className="font-medium text-lg mb-4 flex items-center gap-2 text-uber-black">
+                    <Phone size={18} className="text-uber-black" />
                     Contact Information
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -215,14 +230,19 @@ const NewPatient: React.FC = () => {
                       name="email"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Email</FormLabel>
+                          <FormLabel className="text-uber-gray-600">Email</FormLabel>
                           <FormControl>
-                            <div className="flex items-center">
-                              <Mail size={16} className="mr-2 text-uber-gray-500" />
-                              <Input type="email" placeholder="Email address" {...field} />
+                            <div className="flex items-center relative">
+                              <Mail size={16} className="absolute ml-3 text-uber-gray-500 pointer-events-none" />
+                              <Input 
+                                type="email" 
+                                placeholder="Email address" 
+                                {...field} 
+                                className="pl-10 border-uber-gray-300 focus:border-uber-black focus:ring-uber-black h-12" 
+                              />
                             </div>
                           </FormControl>
-                          <FormMessage />
+                          <FormMessage className="text-uber-red" />
                         </FormItem>
                       )}
                     />
@@ -231,14 +251,18 @@ const NewPatient: React.FC = () => {
                       name="phone"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Phone</FormLabel>
+                          <FormLabel className="text-uber-gray-600">Phone</FormLabel>
                           <FormControl>
-                            <div className="flex items-center">
-                              <Phone size={16} className="mr-2 text-uber-gray-500" />
-                              <Input placeholder="Phone number" {...field} />
+                            <div className="flex items-center relative">
+                              <Phone size={16} className="absolute ml-3 text-uber-gray-500 pointer-events-none" />
+                              <Input 
+                                placeholder="Phone number" 
+                                {...field} 
+                                className="pl-10 border-uber-gray-300 focus:border-uber-black focus:ring-uber-black h-12" 
+                              />
                             </div>
                           </FormControl>
-                          <FormMessage />
+                          <FormMessage className="text-uber-red" />
                         </FormItem>
                       )}
                     />
@@ -246,9 +270,9 @@ const NewPatient: React.FC = () => {
                 </div>
 
                 {/* Address Information */}
-                <div className="bg-uber-gray-50 p-4 rounded-lg border border-uber-gray-100">
-                  <h3 className="font-medium text-lg mb-4 flex items-center gap-2">
-                    <MapPin size={18} className="text-uber-gray-600" />
+                <div className="bg-uber-gray-50 p-5 rounded-lg border border-uber-gray-100">
+                  <h3 className="font-medium text-lg mb-4 flex items-center gap-2 text-uber-black">
+                    <MapPin size={18} className="text-uber-black" />
                     Address
                   </h3>
                   <div className="grid grid-cols-1 gap-4">
@@ -257,11 +281,15 @@ const NewPatient: React.FC = () => {
                       name="street"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Street</FormLabel>
+                          <FormLabel className="text-uber-gray-600">Street</FormLabel>
                           <FormControl>
-                            <Input placeholder="Street address" {...field} />
+                            <Input 
+                              placeholder="Street address" 
+                              {...field} 
+                              className="border-uber-gray-300 focus:border-uber-black focus:ring-uber-black h-12" 
+                            />
                           </FormControl>
-                          <FormMessage />
+                          <FormMessage className="text-uber-red" />
                         </FormItem>
                       )}
                     />
@@ -271,11 +299,15 @@ const NewPatient: React.FC = () => {
                         name="city"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>City</FormLabel>
+                            <FormLabel className="text-uber-gray-600">City</FormLabel>
                             <FormControl>
-                              <Input placeholder="City" {...field} />
+                              <Input 
+                                placeholder="City" 
+                                {...field} 
+                                className="border-uber-gray-300 focus:border-uber-black focus:ring-uber-black h-12" 
+                              />
                             </FormControl>
-                            <FormMessage />
+                            <FormMessage className="text-uber-red" />
                           </FormItem>
                         )}
                       />
@@ -284,11 +316,16 @@ const NewPatient: React.FC = () => {
                         name="plz"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Postal Code</FormLabel>
+                            <FormLabel className="text-uber-gray-600">Postal Code</FormLabel>
                             <FormControl>
-                              <Input type="number" placeholder="Postal code" {...field} />
+                              <Input 
+                                type="number" 
+                                placeholder="Postal code" 
+                                {...field} 
+                                className="border-uber-gray-300 focus:border-uber-black focus:ring-uber-black h-12" 
+                              />
                             </FormControl>
-                            <FormMessage />
+                            <FormMessage className="text-uber-red" />
                           </FormItem>
                         )}
                       />
@@ -298,11 +335,15 @@ const NewPatient: React.FC = () => {
                       name="country"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Country</FormLabel>
+                          <FormLabel className="text-uber-gray-600">Country</FormLabel>
                           <FormControl>
-                            <Input placeholder="Country" {...field} />
+                            <Input 
+                              placeholder="Country" 
+                              {...field} 
+                              className="border-uber-gray-300 focus:border-uber-black focus:ring-uber-black h-12" 
+                            />
                           </FormControl>
-                          <FormMessage />
+                          <FormMessage className="text-uber-red" />
                         </FormItem>
                       )}
                     />
@@ -310,9 +351,9 @@ const NewPatient: React.FC = () => {
                 </div>
 
                 {/* Medical Information */}
-                <div className="bg-uber-gray-50 p-4 rounded-lg border border-uber-gray-100">
-                  <h3 className="font-medium text-lg mb-4 flex items-center gap-2">
-                    <Heart size={18} className="text-uber-gray-600" />
+                <div className="bg-uber-gray-50 p-5 rounded-lg border border-uber-gray-100">
+                  <h3 className="font-medium text-lg mb-4 flex items-center gap-2 text-uber-black">
+                    <Heart size={18} className="text-uber-black" />
                     Medical Information
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -321,11 +362,16 @@ const NewPatient: React.FC = () => {
                       name="height"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Height (cm)</FormLabel>
+                          <FormLabel className="text-uber-gray-600">Height (cm)</FormLabel>
                           <FormControl>
-                            <Input type="number" placeholder="Height in cm" {...field} />
+                            <Input 
+                              type="number" 
+                              placeholder="Height in cm" 
+                              {...field} 
+                              className="border-uber-gray-300 focus:border-uber-black focus:ring-uber-black h-12" 
+                            />
                           </FormControl>
-                          <FormMessage />
+                          <FormMessage className="text-uber-red" />
                         </FormItem>
                       )}
                     />
@@ -334,11 +380,16 @@ const NewPatient: React.FC = () => {
                       name="weight"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Weight (kg)</FormLabel>
+                          <FormLabel className="text-uber-gray-600">Weight (kg)</FormLabel>
                           <FormControl>
-                            <Input type="number" placeholder="Weight in kg" {...field} />
+                            <Input 
+                              type="number" 
+                              placeholder="Weight in kg" 
+                              {...field} 
+                              className="border-uber-gray-300 focus:border-uber-black focus:ring-uber-black h-12" 
+                            />
                           </FormControl>
-                          <FormMessage />
+                          <FormMessage className="text-uber-red" />
                         </FormItem>
                       )}
                     />
@@ -346,9 +397,9 @@ const NewPatient: React.FC = () => {
                 </div>
 
                 {/* Insurance Information */}
-                <div className="bg-uber-gray-50 p-4 rounded-lg border border-uber-gray-100">
-                  <h3 className="font-medium text-lg mb-4 flex items-center gap-2">
-                    <Heart size={18} className="text-uber-gray-600" />
+                <div className="bg-uber-gray-50 p-5 rounded-lg border border-uber-gray-100">
+                  <h3 className="font-medium text-lg mb-4 flex items-center gap-2 text-uber-black">
+                    <Shield size={18} className="text-uber-black" />
                     Insurance Information
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -357,11 +408,15 @@ const NewPatient: React.FC = () => {
                       name="insurance_provider"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Insurance Provider</FormLabel>
+                          <FormLabel className="text-uber-gray-600">Insurance Provider</FormLabel>
                           <FormControl>
-                            <Input placeholder="Insurance provider" {...field} />
+                            <Input 
+                              placeholder="Insurance provider" 
+                              {...field} 
+                              className="border-uber-gray-300 focus:border-uber-black focus:ring-uber-black h-12" 
+                            />
                           </FormControl>
-                          <FormMessage />
+                          <FormMessage className="text-uber-red" />
                         </FormItem>
                       )}
                     />
@@ -370,11 +425,16 @@ const NewPatient: React.FC = () => {
                       name="insurance_number"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Insurance Number</FormLabel>
+                          <FormLabel className="text-uber-gray-600">Insurance Number</FormLabel>
                           <FormControl>
-                            <Input type="number" placeholder="Insurance number" {...field} />
+                            <Input 
+                              type="number" 
+                              placeholder="Insurance number" 
+                              {...field} 
+                              className="border-uber-gray-300 focus:border-uber-black focus:ring-uber-black h-12" 
+                            />
                           </FormControl>
-                          <FormMessage />
+                          <FormMessage className="text-uber-red" />
                         </FormItem>
                       )}
                     />
@@ -384,7 +444,7 @@ const NewPatient: React.FC = () => {
                 <Button 
                   type="submit" 
                   disabled={isLoading}
-                  className="w-full h-12 bg-uber-black text-white hover:bg-uber-gray-800"
+                  className="w-full h-14 bg-uber-black text-white hover:bg-uber-gray-800 font-medium text-base rounded-md"
                 >
                   {isLoading ? "Creating..." : "Create Patient"}
                 </Button>
