@@ -1,12 +1,5 @@
 
-import { createClient } from "@supabase/supabase-js";
-
-// Supabase client setup with public anon key
-// These will be replaced with actual values when connecting to Supabase
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+import { supabase } from "@/integrations/supabase/client";
 
 // Document upload function
 export async function uploadDocument(file: File, patientId = 1) {
