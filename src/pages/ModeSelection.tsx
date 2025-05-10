@@ -3,7 +3,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAppContext } from "@/context/AppContext";
-import { PlusCircle, Upload } from "lucide-react";
+import { PlusCircle, Upload, Wine } from "lucide-react";
 import { toast } from "sonner";
 
 const ModeSelection: React.FC = () => {
@@ -44,14 +44,18 @@ const ModeSelection: React.FC = () => {
               Continue in Standard Mode
             </Button>
             
-            <Button
-              onClick={() => handleModeSelection("accessibility")}
-              className="w-full bg-uber-gray-100 text-uber-black rounded-md hover:bg-uber-gray-200 border border-uber-gray-300 h-14 text-base flex items-center justify-center gap-3 mt-2"
-              variant="outline"
-              size="lg"
-            >
-              Continue in Fine Wine Aged Mode
-            </Button>
+            <div className="wine-button-container w-full h-14 relative mt-2">
+              <button
+                onClick={() => handleModeSelection("accessibility")}
+                className="wine-button group w-full h-full border border-uber-gray-300 bg-white text-uber-black rounded-md flex items-center justify-center gap-3 overflow-hidden relative z-10"
+              >
+                <div className="wine-fill absolute bottom-0 left-0 right-0 bg-gradient-to-t from-[#8e0c25] to-[#bf1a36] h-0 group-hover:h-full transition-all duration-[1.5s] ease-out z-0"></div>
+                <div className="wine-contents flex items-center justify-center gap-3 relative z-10 w-full h-full group-hover:text-white transition-colors duration-1000">
+                  <Wine size={20} className="wine-icon" />
+                  <span className="font-medium">Continue in Fine Wine Aged Mode</span>
+                </div>
+              </button>
+            </div>
             
             <div className="relative py-6">
               <div className="absolute inset-0 flex items-center">
@@ -77,6 +81,27 @@ const ModeSelection: React.FC = () => {
       <footer className="py-6 text-center text-uber-gray-500 text-sm border-t border-uber-gray-100">
         <p>© 2025 MediTake Healthcare</p>
       </footer>
+
+      {/* Add CSS for the wine glass animation */}
+      <style jsx>{`
+        @keyframes wine-slosh {
+          0% { transform: translateX(0); }
+          25% { transform: translateX(2px); }
+          50% { transform: translateX(-2px); }
+          75% { transform: translateX(1px); }
+          100% { transform: translateX(0); }
+        }
+        
+        .wine-button-container:hover .wine-fill {
+          animation: wine-slosh 0.5s ease-in-out forwards;
+          animation-delay: 1.5s;
+        }
+        
+        .wine-button:focus-visible {
+          outline: 2px solid #276EF1;
+          outline-offset: 2px;
+        }
+      `}</style>
     </div>
   );
 };

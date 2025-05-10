@@ -143,3 +143,29 @@
   from { opacity: 0; }
   to { opacity: 1; }
 }
+
+/* Wine Glass Button Animation Styles */
+.wine-button {
+  transition: all 0.3s ease;
+}
+
+.wine-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(142, 12, 37, 0.15);
+}
+
+.wine-button .wine-icon {
+  transition: transform 0.5s ease;
+}
+
+.wine-button:hover .wine-icon {
+  transform: rotate(-10deg);
+}
+
+@keyframes wine-slosh {
+  0% { transform: translateX(0); }
+  25% { transform: translateX(2px); }
+  50% { transform: translateX(-2px); }
+  75% { transform: translateX(1px); }
+  100% { transform: translateX(0); }
+}
