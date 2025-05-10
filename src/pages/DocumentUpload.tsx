@@ -3,11 +3,11 @@ import React, { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { useAppContext } from "@/context/AppContext";
+import { useAppContext, Document } from "@/context/AppContext";
 import { uploadDocument } from "@/lib/supabase";
 import Header from "@/components/Header";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { Camera, Upload, X, ImagePlus, Check } from "lucide-react";
+import { Camera, Upload, X, ImagePlus } from "lucide-react";
 import { toast } from "sonner";
 
 const DocumentUpload: React.FC = () => {
@@ -56,11 +56,13 @@ const DocumentUpload: React.FC = () => {
       for (const file of files) {
         const result = await uploadDocument(file);
         if (result.success) {
-          addUploadedDocument({
+          const documentObj: Document = {
             id: Date.now().toString(),
             url: result.url,
             name: file.name
-          });
+          };
+          
+          addUploadedDocument(documentObj);
         } else {
           throw new Error("Failed to upload document");
         }

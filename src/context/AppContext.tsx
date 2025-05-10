@@ -4,14 +4,21 @@ import React, { createContext, useContext, useState, ReactNode } from "react";
 // Define app modes
 export type AppMode = "standard" | "accessibility";
 
+// Document type definition
+export type Document = {
+  id: string;
+  url: string;
+  name: string;
+};
+
 // Context type definition
 type AppContextType = {
   mode: AppMode;
   setMode: (mode: AppMode) => void;
   isLoading: boolean;
   setIsLoading: (isLoading: boolean) => void;
-  uploadedDocuments: string[];
-  addUploadedDocument: (documentUrl: string) => void;
+  uploadedDocuments: Document[];
+  addUploadedDocument: (document: Document) => void;
   clearUploadedDocuments: () => void;
 };
 
@@ -33,10 +40,10 @@ export const useAppContext = () => useContext(AppContext);
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [mode, setMode] = useState<AppMode>("standard");
   const [isLoading, setIsLoading] = useState(false);
-  const [uploadedDocuments, setUploadedDocuments] = useState<string[]>([]);
+  const [uploadedDocuments, setUploadedDocuments] = useState<Document[]>([]);
 
-  const addUploadedDocument = (documentUrl: string) => {
-    setUploadedDocuments((prev) => [...prev, documentUrl]);
+  const addUploadedDocument = (document: Document) => {
+    setUploadedDocuments((prev) => [...prev, document]);
   };
 
   const clearUploadedDocuments = () => {

@@ -8,7 +8,7 @@ export async function uploadDocument(file: File, patientId = 1) {
     const fileName = `${patientId}/${Date.now()}.${fileExt}`;
     const filePath = `${fileName}`;
     
-    // Upload file to storage bucket
+    // Upload file to storage bucket 'images'
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('images')
       .upload(filePath, file, {
@@ -17,6 +17,7 @@ export async function uploadDocument(file: File, patientId = 1) {
       });
       
     if (uploadError) {
+      console.error("Upload error:", uploadError);
       throw uploadError;
     }
     
@@ -28,18 +29,19 @@ export async function uploadDocument(file: File, patientId = 1) {
     const publicUrl = urlData.publicUrl;
     
     // Insert record into documents_and_images table
+    // Only include patient_id and raw_input fields, leaving type and llm_output null
     const { data, error } = await supabase
       .from('documents_and_images')
       .insert([
         { 
-          type: 'docs', 
-          raw_input: publicUrl, 
-          patient_id: patientId 
+          patient_id: patientId,
+          raw_input: publicUrl 
         }
       ])
       .select();
       
     if (error) {
+      console.error("Database error:", error);
       throw error;
     }
     
