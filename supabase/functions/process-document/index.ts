@@ -234,21 +234,28 @@ serve(async (req) => {
       );
     }
 
-    // STEP 3: Update database
+    // STEP 3: Update database - FIXED DATA MAPPING
     console.log(`Updating database record ${record_id} with type: ${geminiResult.type}`);
     try {
+      // Properly structure the data for the database
+      const updateData = {
+        type: geminiResult.type, // Store type as a string in the type column
+        llm_output: { description: geminiResult.description } // Store description as JSON in llm_output column
+      };
+      
+      console.log("Database update payload:", updateData);
+      
       const { error: updateError } = await supabase
         .from('documents_and_images')
-        .update({ 
-          type: geminiResult.type,
-          llm_output: { description: geminiResult.description }
-        })
+        .update(updateData)
         .eq('id', record_id);
 
       if (updateError) {
         console.error("Database update error:", updateError);
         throw new Error(`Failed to update database record: ${updateError.message}`);
       }
+      
+      console.log(`Successfully updated database record ${record_id}`);
     } catch (dbError) {
       console.error("Error updating database:", dbError);
       return new Response(
