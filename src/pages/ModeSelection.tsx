@@ -83,7 +83,7 @@ const ModeSelection: React.FC = () => {
       </footer>
 
       {/* Add CSS for the wine glass animation */}
-      <style jsx>{`
+      <style>{`
         @keyframes wine-slosh {
           0% { transform: translateX(0); }
           25% { transform: translateX(2px); }
