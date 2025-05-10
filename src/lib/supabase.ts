@@ -28,8 +28,8 @@ export async function uploadDocument(file: File, patientId = 1) {
       
     const publicUrl = urlData.publicUrl;
     
-    // Insert record into documents_and_images table
-    // Only include patient_id and raw_input fields, leaving type and llm_output null
+    // Insert record into documents_and_images table without specifying document_id
+    // This will let the database auto-generate the primary key
     const { data, error } = await supabase
       .from('documents_and_images')
       .insert([
