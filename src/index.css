@@ -197,7 +197,7 @@
   100% { transform: translateX(0%); }
 }
 
-/* Bubble effect */
+/* Enhanced bubble effect styles */
 .bubble-effect {
   position: relative;
 }
@@ -207,4 +207,62 @@
   background: rgba(255, 255, 255, 0.6);
   border-radius: 50%;
   opacity: 0;
+}
+
+/* Glass reflection */
+.glass-reflection {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.25) 0%,
+    rgba(255, 255, 255, 0) 50%,
+    rgba(255, 255, 255, 0.1) 80%,
+    rgba(255, 255, 255, 0.2) 100%
+  );
+  opacity: 0;
+  transition: opacity 0.5s ease-in;
+  pointer-events: none;
+}
+
+.glass-effect:hover .glass-reflection {
+  opacity: 1;
+}
+
+/* Wine legs effect */
+.wine-legs {
+  position: absolute;
+  bottom: 0;
+  width: 2px;
+  height: 0;
+  background: linear-gradient(to top, rgba(142, 12, 37, 0.8), transparent);
+  transition: height 3s ease-out;
+  opacity: 0;
+}
+
+.wine-legs-container:hover .wine-legs {
+  height: 80%;
+  opacity: 0.7;
+}
+
+/* Refraction lighting effect */
+.refraction-light {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(255, 255, 255, 0.2) 0%,
+    rgba(255, 255, 255, 0) 70%
+  );
+  opacity: 0;
+  mix-blend-mode: overlay;
+  transition: opacity 0.5s ease;
+}
+
+.light-effect:hover .refraction-light {
+  opacity: 0.8;
 }

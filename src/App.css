@@ -40,3 +40,37 @@
 .read-the-docs {
   color: #888;
 }
+
+/* Wine Glass Effect Utilities */
+.wine-glass-glow {
+  filter: drop-shadow(0 0 3px rgba(142, 12, 37, 0.3));
+  transition: filter 0.5s ease;
+}
+
+.wine-glass-glow:hover {
+  filter: drop-shadow(0 0 8px rgba(142, 12, 37, 0.5));
+}
+
+/* Wine surface reflection */
+.wine-surface-reflection {
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(255, 255, 255, 0.1) 20%,
+    rgba(255, 255, 255, 0.2) 50%,
+    rgba(255, 255, 255, 0.1) 80%,
+    transparent
+  );
+}
+
+/* Light refraction beam */
+.light-beam {
+  background: linear-gradient(
+    to right,
+    transparent 30%,
+    rgba(255, 255, 255, 0.1) 50%,
+    transparent 70%
+  );
+  transform: rotate(30deg);
+  filter: blur(3px);
+}
