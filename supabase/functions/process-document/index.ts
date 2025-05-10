@@ -19,6 +19,7 @@ interface GeminiResponse {
   description: string;
 }
 
+// Use the serve function directly without nesting
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
