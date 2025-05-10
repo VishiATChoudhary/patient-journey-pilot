@@ -19,8 +19,8 @@ interface GeminiResponse {
   description: string;
 }
 
-// Use the serve function directly without nesting
-serve(async (req) => {
+// Regular HTTP handler - avoiding nested serve functions
+async function handleRequest(req: Request): Promise<Response> {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -107,7 +107,7 @@ serve(async (req) => {
       }
     );
   }
-});
+}
 
 // Function to determine MIME type from URL
 function determineMimeType(url: string): string {
@@ -203,3 +203,6 @@ async function analyzeImageWithGemini(base64Image: string, mimeType: string): Pr
     throw new Error(`Gemini API error: ${error.message}`);
   }
 }
+
+// Use serve() with the handleRequest function directly - avoiding nested functions
+serve(handleRequest);
