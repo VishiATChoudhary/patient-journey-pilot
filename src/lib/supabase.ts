@@ -43,7 +43,8 @@ export async function uploadDocument(file: File, patientId = 1, retryCount = 0) 
       .insert([
         { 
           patient_id: patientId,
-          raw_input: publicUrl 
+          raw_input: publicUrl,
+          display_name: file.name // Store the original filename
         }
       ])
       .select();
@@ -62,7 +63,12 @@ export async function uploadDocument(file: File, patientId = 1, retryCount = 0) 
       throw error;
     }
     
-    return { success: true, url: publicUrl, data };
+    return { 
+      success: true, 
+      url: publicUrl, 
+      data,
+      name: file.name // Return the original filename
+    };
     
   } catch (error) {
     console.error('Error uploading document:', error);
