@@ -36,7 +36,7 @@ function breakCircuit() {
   setTimeout(resetCircuit, 60000); // Reset after 1 minute
 }
 
-// Flat implementation without recursion
+// Completely flat implementation without recursion
 serve(async (req) => {
   console.log("Request received:", req.method, req.url);
   
@@ -118,15 +118,17 @@ serve(async (req) => {
     const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJranFkeHl3c2Rpa2N5d3hnZ2RlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY4NzIwOTAsImV4cCI6MjA2MjQ0ODA5MH0.mR6mCEhgr_K_WEoZ2v_5j8AdG1jxh3pp1Nk7A4mKx44";
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-    // STEP 1: Fetch the image with timeout
+    // STEP 1: Fetch the image with timeout - REWRITTEN TO AVOID RECURSION
     console.log("Fetching image from URL:", image_url);
     let imageBase64: string;
     let mimeType: string;
     
     try {
+      // Create a manually controlled fetch with timeout
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-      
+
+      // Fetch the image with controlled signal
       const imageResponse = await fetch(image_url, { signal: controller.signal });
       clearTimeout(timeoutId);
       
@@ -134,7 +136,7 @@ serve(async (req) => {
         throw new Error(`Failed to fetch image: ${imageResponse.statusText} (${imageResponse.status})`);
       }
       
-      // Convert image to base64
+      // Get the image as a blob - NON-RECURSIVE APPROACH
       const imageBlob = await imageResponse.blob();
       
       // Check if the image is too large
@@ -142,10 +144,26 @@ serve(async (req) => {
         throw new Error(`Image too large: ${Math.round(imageBlob.size / 1024 / 1024)}MB (max 10MB)`);
       }
       
+      // Process the image in chunks to avoid memory issues
+      // Use arrayBuffer directly instead of recursive/iterative approach
       const imageArrayBuffer = await imageBlob.arrayBuffer();
-      imageBase64 = btoa(
-        String.fromCharCode(...new Uint8Array(imageArrayBuffer))
-      );
+      
+      // Convert to base64 using a non-recursive approach with fixed-size chunks
+      // This is a key change to avoid stack overflow
+      const bytes = new Uint8Array(imageArrayBuffer);
+      const chunkSize = 1024; // Process in 1KB chunks to avoid stack issues
+      let binary = '';
+      
+      // Process bytes in chunks using iteration instead of recursion
+      for (let i = 0; i < bytes.length; i += chunkSize) {
+        const chunk = bytes.slice(i, Math.min(i + chunkSize, bytes.length));
+        for (let j = 0; j < chunk.length; j++) {
+          binary += String.fromCharCode(chunk[j]);
+        }
+      }
+      
+      // Convert binary string to base64 in one operation
+      imageBase64 = btoa(binary);
       
       console.log(`Successfully fetched and encoded image (${Math.round(imageArrayBuffer.byteLength / 1024)} KB)`);
 
@@ -175,12 +193,12 @@ serve(async (req) => {
       );
     }
 
-    // STEP 2: Call Gemini API with retries
+    // STEP 2: Call Gemini API with retries - NON-RECURSIVE IMPLEMENTATION
     console.log("Calling Gemini API for image analysis");
     let geminiResult: GeminiResponse;
     
     try {
-      geminiResult = await callGeminiAPI(imageBase64, mimeType);
+      geminiResult = await callGeminiAPIFlat(imageBase64, mimeType);
       console.log("Gemini API result:", geminiResult);
       
       if (!geminiResult || typeof geminiResult !== 'object') {
@@ -292,8 +310,8 @@ serve(async (req) => {
   }
 });
 
-// Non-recursive implementation with explicit error handling and retry logic
-async function callGeminiAPI(base64Image: string, mimeType: string): Promise<GeminiResponse> {
+// Completely flat (non-recursive) implementation of Gemini API calling
+async function callGeminiAPIFlat(base64Image: string, mimeType: string): Promise<GeminiResponse> {
   const GOOGLE_API_KEY = Deno.env.get("GOOGLE_API_KEY");
   if (!GOOGLE_API_KEY) {
     throw new Error("Missing GOOGLE_API_KEY environment variable");
@@ -326,7 +344,7 @@ async function callGeminiAPI(base64Image: string, mimeType: string): Promise<Gem
     }
   };
 
-  // Implement retry mechanism
+  // Implement retry mechanism - NON-RECURSIVE
   const MAX_RETRIES = 3;
   let lastError = null;
 
@@ -367,66 +385,56 @@ async function callGeminiAPI(base64Image: string, mimeType: string): Promise<Gem
 
         console.log("Raw text content:", textContent.substring(0, 100) + "...");
         
-        // Try to parse JSON using all methods, with iteration instead of recursion
-        let parsedJson = null;
-        let parsingMethods = [
-          // Method 1: Direct JSON parsing
-          () => {
-            try {
-              return JSON.parse(textContent);
-            } catch (e) {
-              console.log("Direct JSON parsing failed:", e);
-              return null;
-            }
-          },
-          
-          // Method 2: Extract from markdown code blocks
-          () => {
-            try {
-              const jsonMatch = textContent.match(/```(?:json)?\s*(\{.*?\})\s*```/s) || 
-                               textContent.match(/(\{.*\})/s);
-              return jsonMatch ? JSON.parse(jsonMatch[1]) : null;
-            } catch (e) {
-              console.log("JSON extraction from markdown failed:", e);
-              return null;
-            }
-          },
-          
-          // Method 3: Extract any JSON-like structure
-          () => {
-            try {
-              const possibleJson = textContent.match(/\{[^]*\}/);
-              return possibleJson ? JSON.parse(possibleJson[0]) : null;
-            } catch (e) {
-              console.log("JSON extraction from text failed:", e);
-              return null;
-            }
-          },
-          
-          // Method 4: Basic fallback with regex extraction
-          () => {
-            try {
-              const typeMatch = textContent.match(/["']type["']\s*:\s*["']([^"']+)["']/);
-              const descMatch = textContent.match(/["']description["']\s*:\s*["']([^"']+)["']/);
-              
-              if (typeMatch || descMatch) {
-                return {
-                  type: typeMatch ? typeMatch[1] : "Unknown",
-                  description: descMatch ? descMatch[1] : "No description available"
-                };
-              }
-              return null;
-            } catch (e) {
-              console.log("Regex extraction failed:", e);
-              return null;
-            }
-          }
-        ];
+        // Iterative (non-recursive) JSON parsing with multiple strategies
+        let parsedJson: GeminiResponse | null = null;
         
-        // Try each parsing method in sequence
-        for (const method of parsingMethods) {
-          parsedJson = method();
-          if (parsedJson) break;
+        // Method 1: Direct JSON parsing
+        try {
+          parsedJson = JSON.parse(textContent);
+        } catch (e) {
+          console.log("Direct JSON parsing failed:", e);
+        }
+        
+        // Method 2: Extract from markdown code blocks
+        if (!parsedJson) {
+          try {
+            const jsonMatch = textContent.match(/```(?:json)?\s*(\{.*?\})\s*```/s) || 
+                             textContent.match(/(\{.*\})/s);
+            if (jsonMatch) {
+              parsedJson = JSON.parse(jsonMatch[1]);
+            }
+          } catch (e) {
+            console.log("JSON extraction from markdown failed:", e);
+          }
+        }
+        
+        // Method 3: Extract any JSON-like structure
+        if (!parsedJson) {
+          try {
+            const possibleJson = textContent.match(/\{[^]*\}/);
+            if (possibleJson) {
+              parsedJson = JSON.parse(possibleJson[0]);
+            }
+          } catch (e) {
+            console.log("JSON extraction from text failed:", e);
+          }
+        }
+        
+        // Method 4: Basic fallback with regex extraction
+        if (!parsedJson) {
+          try {
+            const typeMatch = textContent.match(/["']type["']\s*:\s*["']([^"']+)["']/);
+            const descMatch = textContent.match(/["']description["']\s*:\s*["']([^"']+)["']/);
+            
+            if (typeMatch || descMatch) {
+              parsedJson = {
+                type: typeMatch ? typeMatch[1] : "Unknown",
+                description: descMatch ? descMatch[1] : "No description available"
+              };
+            }
+          } catch (e) {
+            console.log("Regex extraction failed:", e);
+          }
         }
         
         // If all parsing methods failed
@@ -456,7 +464,6 @@ async function callGeminiAPI(base64Image: string, mimeType: string): Promise<Gem
         const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
         console.log(`Waiting ${delay}ms before next attempt...`);
         await new Promise(resolve => setTimeout(resolve, delay));
-        continue;
       } else {
         // Don't retry on parsing errors or other issues
         throw error;
