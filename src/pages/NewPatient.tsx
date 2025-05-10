@@ -66,12 +66,7 @@ const NewPatient: React.FC = () => {
 
   async function onSubmit(data: PatientFormValues) {
     try {
-      if (!user) {
-        toast.error("You must be logged in to create a patient");
-        return;
-      }
-
-      // Insert patient data into Supabase
+      // Insert patient data into Supabase, without checking for user
       const { data: patientData, error } = await supabase
         .from("patients")
         .insert([{

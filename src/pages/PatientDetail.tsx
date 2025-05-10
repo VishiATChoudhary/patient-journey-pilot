@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import { useAppContext } from "@/context/AppContext";
-import { useAuth } from "@/context/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Phone, Mail, MapPin, Calendar, Heart, FileText } from "lucide-react";
@@ -31,14 +30,13 @@ interface Patient {
 const PatientDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { mode } = useAppContext();
-  const { user } = useAuth();
   const [patient, setPatient] = useState<Patient | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
     async function fetchPatientDetails() {
-      if (!id || !user) return;
+      if (!id) return;
       
       try {
         const { data, error } = await supabase
@@ -58,7 +56,7 @@ const PatientDetail: React.FC = () => {
     }
 
     fetchPatientDetails();
-  }, [id, user]);
+  }, [id]);
 
   const getGenderLabel = (gender: number) => {
     const genders = ["Female", "Male", "Non-binary", "Other"];
