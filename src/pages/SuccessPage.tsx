@@ -2,9 +2,9 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { useAppContext } from "@/context/AppContext";
 import Header from "@/components/Header";
+import { Check, Home } from "lucide-react";
 
 const SuccessPage: React.FC = () => {
   const { mode, uploadedDocuments, clearUploadedDocuments } = useAppContext();
@@ -16,47 +16,35 @@ const SuccessPage: React.FC = () => {
   };
   
   return (
-    <div className={`min-h-screen bg-healthcare-lightGray flex flex-col ${mode === "accessibility" ? "accessibility-mode" : ""}`}>
+    <div className={`min-h-screen bg-uber-gray-50 flex flex-col ${mode === "accessibility" ? "accessibility-mode" : ""}`}>
       <Header title="Success" showBackButton />
       
       <main className="flex-grow p-6 flex flex-col items-center justify-center">
-        <Card className="p-8 w-full max-w-md text-center">
-          <div className="w-24 h-24 bg-healthcare-green rounded-full flex items-center justify-center mx-auto mb-6">
-            <svg 
-              xmlns="http://www.w3.org/2000/svg" 
-              className="h-12 w-12 text-white" 
-              viewBox="0 0 20 20" 
-              fill="currentColor"
-            >
-              <path 
-                fillRule="evenodd" 
-                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" 
-                clipRule="evenodd" 
-              />
-            </svg>
+        <div className="w-full max-w-md bg-white rounded-lg shadow-sm p-8 text-center fade-in">
+          <div className="w-20 h-20 bg-uber-green rounded-full flex items-center justify-center mx-auto mb-8">
+            <Check className="h-10 w-10 text-white" />
           </div>
           
-          <h2 className={`font-bold mb-3 ${mode === "accessibility" ? "text-3xl" : "text-2xl"}`}>
-            Documents Uploaded Successfully!
+          <h2 className={`font-bold text-uber-black mb-3 ${mode === "accessibility" ? "text-3xl" : "text-2xl"}`}>
+            Documents Uploaded
           </h2>
           
-          <p className={`text-gray-600 mb-6 ${mode === "accessibility" ? "text-xl" : ""}`}>
+          <p className={`text-uber-gray-600 mb-6 ${mode === "accessibility" ? "text-xl" : ""}`}>
             Your medical documents have been securely uploaded to our system.
           </p>
           
-          <p className="mb-8">
+          <p className="mb-8 text-uber-gray-500">
             {uploadedDocuments.length} document{uploadedDocuments.length !== 1 ? "s" : ""} submitted
           </p>
           
-          <div className="space-y-4">
-            <Button 
-              onClick={handleFinish}
-              className={`w-full bg-healthcare-blue hover:bg-blue-700 ${mode === "accessibility" ? "text-xl py-6" : ""}`}
-            >
-              Back to Home
-            </Button>
-          </div>
-        </Card>
+          <Button 
+            onClick={handleFinish}
+            className="w-full bg-uber-black text-white rounded-md hover:bg-uber-gray-900 h-14 text-base flex items-center justify-center gap-3"
+          >
+            <Home size={20} />
+            Back to Home
+          </Button>
+        </div>
       </main>
     </div>
   );

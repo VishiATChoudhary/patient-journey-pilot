@@ -1,4 +1,3 @@
-
 import type { Config } from "tailwindcss";
 
 export default {
@@ -63,13 +62,26 @@ export default {
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
 				},
-				// Healthcare-specific colors
-				healthcare: {
-					blue: '#0074D9',
-					green: '#2ECC40',
-					orange: '#FF851B',
-					lightGray: '#F8F9FA',
-					darkGray: '#333333'
+				// Uber-inspired color scheme
+				uber: {
+					black: '#000000',
+					white: '#FFFFFF',
+					gray: {
+						50: '#F8F8F8',
+						100: '#F2F2F2',
+						200: '#E6E6E6',
+						300: '#D6D6D6',
+						400: '#C2C2C2',
+						500: '#A0A0A0',
+						600: '#717171',
+						700: '#545454',
+						800: '#333333',
+						900: '#1F1F1F',
+					},
+					blue: '#276EF1',
+					green: '#05A357',
+					red: '#E11900',
+					yellow: '#FFC043',
 				}
 			},
 			borderRadius: {
@@ -98,6 +110,9 @@ export default {
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
 				'accordion-up': 'accordion-up 0.2s ease-out'
+			},
+			fontFamily: {
+				sans: ['"Inter"', 'sans-serif'],
 			}
 		}
 	},
