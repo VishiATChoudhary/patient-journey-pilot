@@ -21,6 +21,7 @@ const buttonVariants = cva(
         link: "text-primary underline-offset-4 hover:underline",
         wine: "border border-uber-gray-300 bg-transparent text-uber-black hover:border-[#8e0c25]/30 transition-all duration-300",
         "wine-hover": "border border-uber-gray-300 bg-white text-uber-black hover:bg-[#8e0c25] hover:text-white hover:border-[#8e0c25] transition-all duration-300",
+        "create-patient": "border border-uber-black bg-white text-uber-black hover:bg-uber-black hover:text-white transition-all duration-300",
       },
       size: {
         default: "h-10 px-4 py-2",
