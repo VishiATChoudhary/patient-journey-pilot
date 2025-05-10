@@ -7,7 +7,7 @@ import { useAppContext, Document } from "@/context/AppContext";
 import { uploadDocument } from "@/lib/supabase";
 import Header from "@/components/Header";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { Camera, Upload, X, ImagePlus } from "lucide-react";
+import { Upload, X, ImagePlus } from "lucide-react";
 import { toast } from "sonner";
 
 const DocumentUpload: React.FC = () => {
@@ -17,6 +17,14 @@ const DocumentUpload: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
+  
+  // If in accessibility mode, redirect to home
+  React.useEffect(() => {
+    if (mode === "accessibility") {
+      toast.error("File uploads are not available in Fine Wine Aged Mode");
+      navigate("/");
+    }
+  }, [mode, navigate]);
   
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = event.target.files;
@@ -78,10 +86,13 @@ const DocumentUpload: React.FC = () => {
     }
   };
   
-  const showCamera = 'mediaDevices' in navigator;
+  // If in accessibility mode, don't render the upload UI
+  if (mode === "accessibility") {
+    return null;
+  }
   
   return (
-    <div className={`min-h-screen bg-uber-gray-50 flex flex-col ${mode === "accessibility" ? "accessibility-mode" : ""}`}>
+    <div className="min-h-screen bg-uber-gray-50 flex flex-col">
       <Header title="Upload Documents" showBackButton />
       
       {isLoading && <LoadingSpinner />}
@@ -89,7 +100,7 @@ const DocumentUpload: React.FC = () => {
       <main className="flex-grow p-4">
         <div className="w-full max-w-md mx-auto space-y-5">
           <Card className="p-6 bg-white border-0 shadow-sm rounded-lg">
-            <h2 className={`font-semibold text-uber-black mb-5 ${mode === "accessibility" ? "text-2xl" : "text-xl"}`}>
+            <h2 className="font-semibold text-uber-black mb-5 text-xl">
               Upload Medical Documents
             </h2>
             
@@ -106,33 +117,20 @@ const DocumentUpload: React.FC = () => {
               multiple
             />
             
-            <div className="grid grid-cols-1 gap-4 mb-6">
+            <div className="mb-6">
               <Button 
                 onClick={triggerFileInput}
-                className="w-full bg-white border border-uber-gray-300 text-uber-black hover:bg-uber-gray-50 h-14 flex items-center justify-center gap-3 transition-colors"
-                variant="outline"
+                className="w-full bg-uber-black text-white hover:bg-uber-gray-900 h-14 flex items-center justify-center gap-3 transition-colors"
                 type="button"
               >
                 <ImagePlus size={22} />
-                Choose from Gallery
+                Select Documents
               </Button>
-              
-              {showCamera && (
-                <Button
-                  onClick={triggerFileInput}
-                  className="w-full bg-white border border-uber-gray-300 text-uber-black hover:bg-uber-gray-50 h-14 flex items-center justify-center gap-3 transition-colors"
-                  variant="outline"
-                  type="button"
-                >
-                  <Camera size={22} />
-                  Take Photo
-                </Button>
-              )}
             </div>
             
             {previews.length > 0 && (
               <div className="space-y-4 mb-6">
-                <h3 className={`font-medium ${mode === "accessibility" ? "text-xl" : "text-lg"}`}>
+                <h3 className="font-medium text-lg">
                   Document Preview
                 </h3>
                 

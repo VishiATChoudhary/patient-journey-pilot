@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAppContext } from "@/context/AppContext";
 import { PlusCircle, Upload } from "lucide-react";
+import { toast } from "sonner";
 
 const ModeSelection: React.FC = () => {
   const navigate = useNavigate();
@@ -11,7 +12,13 @@ const ModeSelection: React.FC = () => {
   
   const handleModeSelection = (mode: "standard" | "accessibility") => {
     setMode(mode);
-    navigate("/upload");
+    
+    if (mode === "accessibility") {
+      toast.info("Fine Wine Aged Mode activated. Some features are limited.");
+      // Stay on home page for accessibility mode
+    } else {
+      navigate("/upload");
+    }
   };
   
   return (
