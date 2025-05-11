@@ -1,73 +1,58 @@
-# Welcome to your Lovable project
+# Patient Journey Pilot
 
-## Project info
+A document processing pipeline application that helps streamline and analyze patient documents before they reach doctors, with specialized processing modes for different patient demographics.
 
-**URL**: https://lovable.dev/projects/9a671395-a5e3-40fb-96f3-c4f17a7bee96
+## Prerequisites
 
-## How can I edit this code?
+- Python 3.12
+- Node.js and npm
+- OpenAI API Key
+- Gemini API Key
 
-There are several ways of editing your application.
+## Setup Instructions
 
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/9a671395-a5e3-40fb-96f3-c4f17a7bee96) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+1. Install Python dependencies:
+```bash
+pip install -r requirements.txt
 ```
 
-**Edit a file directly in GitHub**
+2. Create a `.env` file in the root directory with the following variables:
+```env
+OPENAI_API_KEY=your_openai_api_key
+VITE_OPENAI_API_KEY=your_openai_api_key
+REACT_APP_GEMINI_API_KEY=your_gemini_api_key
+VITE_GEMINI_API_KEY=your_gemini_api_key
+```
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+Note: The Vite and React environment variables should contain the same API keys.
 
-**Use GitHub Codespaces**
+3. Set up the vector database:
+```bash
+python vdb_setup.py
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+4. In a separate terminal, install and start the frontend:
+```bash
+npm install
+npm start
+```
 
-## What technologies are used for this project?
+## Application Overview
 
-This project is built with:
+This application implements a document processing pipeline that analyzes and prepares patient documents before they reach doctors. The system features two distinct processing modes:
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+### Normal Mode
+The standard processing stream designed for general patient documents. This mode:
+- Processes standard medical documentation
+- Performs basic document analysis
+- Extracts key medical information
+- Prepares documents for doctor review
 
-## How can I deploy this project?
+### Fine Wine Age Mode
+A specialized processing stream optimized for elderly patients. This mode:
+- Implements enhanced sensitivity to age-related medical terminology
+- Provides additional context for geriatric care considerations
+- Includes specialized analysis for chronic conditions common in elderly patients
+- Offers more detailed medical history tracking
 
-Simply open [Lovable](https://lovable.dev/projects/9a671395-a5e3-40fb-96f3-c4f17a7bee96) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+Both modes utilize advanced AI processing to ensure accurate and efficient document handling while maintaining patient privacy and medical compliance standards.

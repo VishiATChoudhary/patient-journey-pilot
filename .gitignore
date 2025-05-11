@@ -23,9 +23,19 @@ dist-ssr
 *.sln
 *.sw?
 
-.env
 
 
 #ignore all mp3 and mp4 files
 *.mp3
 *.mp4
+
+
+#ignore all env files
+.env
+
+#ignore all env.local files
+.env.local
+
+#ignore all env.development files
+.env.development
+
