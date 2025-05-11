@@ -143,3 +143,126 @@
   from { opacity: 0; }
   to { opacity: 1; }
 }
+
+/* Wine Glass Button Animation Enhanced Styles */
+
+/* Custom liquid animation utilities */
+.liquid-fill {
+  position: relative;
+  overflow: hidden;
+}
+
+.liquid-fill::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 0;
+  background: linear-gradient(to top, #5a0417, #8e0c25);
+  transition: height 2.5s cubic-bezier(0.2, 0.8, 0.2, 1.2);
+  z-index: 0;
+}
+
+.liquid-fill:hover::before {
+  height: 100%;
+}
+
+/* Wave effect utilities */
+.wave-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.wave-effect::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 300%;
+  height: 10px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 120' preserveAspectRatio='none'%3E%3Cpath d='M0,24 C300,72 600,-24 900,24 C1200,72 1500,-24 1800,24 L1800,120 L0,120 Z' fill='%238e0c25'/%3E%3C/svg%3E");
+  background-size: 50% 100%;
+  animation: wave-animation 8s linear infinite;
+  opacity: 0;
+  transition: opacity 0.5s ease-in;
+}
+
+.wave-effect:hover::after {
+  opacity: 0.7;
+}
+
+@keyframes wave-animation {
+  0% { transform: translateX(-50%); }
+  100% { transform: translateX(0%); }
+}
+
+/* Enhanced bubble effect styles */
+.bubble-effect {
+  position: relative;
+}
+
+.bubble {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 50%;
+  opacity: 0;
+}
+
+/* Glass reflection */
+.glass-reflection {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.25) 0%,
+    rgba(255, 255, 255, 0) 50%,
+    rgba(255, 255, 255, 0.1) 80%,
+    rgba(255, 255, 255, 0.2) 100%
+  );
+  opacity: 0;
+  transition: opacity 0.5s ease-in;
+  pointer-events: none;
+}
+
+.glass-effect:hover .glass-reflection {
+  opacity: 1;
+}
+
+/* Wine legs effect */
+.wine-legs {
+  position: absolute;
+  bottom: 0;
+  width: 2px;
+  height: 0;
+  background: linear-gradient(to top, rgba(142, 12, 37, 0.8), transparent);
+  transition: height 3s ease-out;
+  opacity: 0;
+}
+
+.wine-legs-container:hover .wine-legs {
+  height: 80%;
+  opacity: 0.7;
+}
+
+/* Refraction lighting effect */
+.refraction-light {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(255, 255, 255, 0.2) 0%,
+    rgba(255, 255, 255, 0) 70%
+  );
+  opacity: 0;
+  mix-blend-mode: overlay;
+  transition: opacity 0.5s ease;
+}
+
+.light-effect:hover .refraction-light {
+  opacity: 0.8;
+}

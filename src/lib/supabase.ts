@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 // Document upload function with retry limit and unique filename generation
@@ -77,6 +76,25 @@ export async function uploadDocument(file: File, patientId: string | null = null
     
   } catch (error) {
     console.error('Error uploading document:', error);
+    return { success: false, error };
+  }
+}
+
+// New function to trigger document processing manually
+export async function processDocument(documentId: number, imageUrl: string) {
+  try {
+    const { data, error } = await supabase.functions.invoke('process-document', {
+      body: { record_id: documentId, image_url: imageUrl }
+    });
+    
+    if (error) {
+      console.error("Error processing document:", error);
+      return { success: false, error };
+    }
+    
+    return { success: true, data };
+  } catch (error) {
+    console.error('Error invoking process-document function:', error);
     return { success: false, error };
   }
 }

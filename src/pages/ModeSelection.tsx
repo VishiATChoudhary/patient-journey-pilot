@@ -3,12 +3,14 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAppContext } from "@/context/AppContext";
-import { PlusCircle, Upload } from "lucide-react";
+import { PlusCircle, Upload, Wine } from "lucide-react";
 import { toast } from "sonner";
+import { useWineGlassSimulation } from "@/hooks/useWineGlassSimulation";
 
 const ModeSelection: React.FC = () => {
   const navigate = useNavigate();
   const { setMode } = useAppContext();
+  const { isHovering, handleMouseEnter, handleMouseLeave } = useWineGlassSimulation();
   
   const handleModeSelection = (mode: "standard" | "accessibility") => {
     setMode(mode);
@@ -45,11 +47,16 @@ const ModeSelection: React.FC = () => {
             </Button>
             
             <Button
+              variant="wine-hover"
               onClick={() => handleModeSelection("accessibility")}
-              className="w-full bg-uber-gray-100 text-uber-black rounded-md hover:bg-uber-gray-200 border border-uber-gray-300 h-14 text-base flex items-center justify-center gap-3 mt-2"
-              variant="outline"
-              size="lg"
+              className="w-full h-14 text-base flex items-center justify-center gap-3"
+              onMouseEnter={handleMouseEnter}
+              onMouseLeave={handleMouseLeave}
             >
+              <Wine 
+                size={20} 
+                className={`transition-transform duration-300 ${isHovering ? 'rotate-45 -translate-y-1' : ''}`} 
+              />
               Continue in Fine Wine Aged Mode
             </Button>
             
@@ -63,9 +70,9 @@ const ModeSelection: React.FC = () => {
             </div>
             
             <Button 
-              variant="outline" 
+              variant="create-patient" 
               onClick={() => navigate("/new-patient")}
-              className="w-full border border-uber-gray-300 bg-white text-uber-black hover:bg-uber-gray-50 h-14 text-base flex items-center justify-center gap-3"
+              className="w-full h-14 text-base flex items-center justify-center gap-3"
             >
               <PlusCircle size={20} />
               Create New Patient

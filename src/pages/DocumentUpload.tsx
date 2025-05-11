@@ -1,10 +1,9 @@
-
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useAppContext, Document } from "@/context/AppContext";
-import { uploadDocument } from "@/lib/supabase";
+import { uploadDocument, processDocument } from "@/lib/supabase";
 import Header from "@/components/Header";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { Upload, X, ImagePlus, FileText } from "lucide-react";
@@ -15,11 +14,12 @@ const DocumentUpload: React.FC = () => {
   const [files, setFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [uploadedDocs, setUploadedDocs] = useState<Array<{id: number, url: string}>>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   
   // If in accessibility mode, redirect to home
-  React.useEffect(() => {
+  useEffect(() => {
     if (mode === "accessibility") {
       toast.error("File uploads are not available in Fine Wine Aged Mode");
       navigate("/");
@@ -59,14 +59,25 @@ const DocumentUpload: React.FC = () => {
     }
     
     setIsLoading(true);
+    setUploadedDocs([]);
     
     try {
+      const uploadedDocuments: Array<{id: number, url: string}> = [];
+      
       for (const file of files) {
         // Pass null instead of default UUID to avoid foreign key constraint issues
         const result = await uploadDocument(file, null);
-        if (result.success) {
+        if (result.success && result.data && result.data[0]) {
+          const documentId = result.data[0].id;
+          const documentUrl = result.url;
+          
+          uploadedDocuments.push({
+            id: documentId,
+            url: documentUrl
+          });
+          
           const documentObj: Document = {
-            id: Date.now().toString(),
+            id: documentId.toString(),
             url: result.url,
             name: file.name
           };
@@ -74,6 +85,28 @@ const DocumentUpload: React.FC = () => {
           addUploadedDocument(documentObj);
         } else {
           throw new Error("Failed to upload document");
+        }
+      }
+      
+      setUploadedDocs(uploadedDocuments);
+      
+      // Process each document after upload
+      for (const doc of uploadedDocuments) {
+        try {
+          // Let the user know we're processing the document
+          toast.info(`Processing document ID: ${doc.id}`);
+          
+          // Call the process-document edge function
+          const processResult = await processDocument(doc.id, doc.url);
+          
+          if (processResult.success) {
+            toast.success(`Document ${doc.id} processed successfully`);
+          } else {
+            toast.error(`Error processing document ${doc.id}: ${processResult.error}`);
+          }
+        } catch (processError) {
+          console.error(`Error processing document ${doc.id}:`, processError);
+          toast.error(`Failed to process document ${doc.id}`);
         }
       }
       
