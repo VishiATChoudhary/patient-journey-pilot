@@ -24,3 +24,8 @@ dist-ssr
 *.sw?
 
 .env
+
+
+#ignore all mp3 and mp4 files
+*.mp3
+*.mp4

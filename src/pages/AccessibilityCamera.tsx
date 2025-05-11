@@ -172,7 +172,7 @@ const AccessibilityCamera: React.FC = () => {
     client.sendUserMessageContent([
       {
         type: 'input_text',
-        text: 'Hello! I am happy to be there to help you. Just show me your medical data and I will take it from there!',
+        text: 'Hello! Hi there I am happy to assist you today.',
       },
     ]);
 
