@@ -172,7 +172,7 @@ const AccessibilityCamera: React.FC = () => {
     client.sendUserMessageContent([
       {
         type: 'input_text',
-        text: 'Hello! I am ready to help you navigate.',
+        text: 'Hello! I am happy to be there to help you. Just show me your medical data and I will take it from there!',
       },
     ]);
 
@@ -560,14 +560,26 @@ const AccessibilityCamera: React.FC = () => {
               </div>
 
               {/* Back Button */}
-              <div className="absolute bottom-8 left-0 right-0 flex justify-center">
+              <div className="absolute bottom-8 left-8">
                 <Button 
                   onClick={handleBackClick}
                   className="bg-white/20 hover:bg-white/40 backdrop-blur-sm text-white rounded-full px-8 py-6 text-lg"
                   size="lg"
                 >
+                  <ArrowRight className="rotate-180 mr-2" size={20} />
                   Back to Home
-                  <ArrowRight size={20} />
+                </Button>
+              </div>
+
+              {/* Next Button */}
+              <div className="absolute bottom-8 right-8">
+                <Button 
+                  onClick={() => navigate("/voice-agent")}
+                  className="bg-white/20 hover:bg-white/40 backdrop-blur-sm text-white rounded-full px-8 py-6 text-lg"
+                  size="lg"
+                >
+                  Next
+                  <ArrowRight className="ml-2" size={20} />
                 </Button>
               </div>
             </div>

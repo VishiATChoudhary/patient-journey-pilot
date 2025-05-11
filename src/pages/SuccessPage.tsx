@@ -1,4 +1,3 @@
-
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -6,6 +5,7 @@ import { useAppContext } from "@/context/AppContext";
 import Header from "@/components/Header";
 import { Check, FileText, Home, ArrowRight, File } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import Fireworks from "react-fireworks";
 
 const SuccessPage: React.FC = () => {
   const { mode, uploadedDocuments, clearUploadedDocuments } = useAppContext();
@@ -25,7 +25,53 @@ const SuccessPage: React.FC = () => {
     <div className={`min-h-screen bg-uber-gray-50 flex flex-col ${mode === "accessibility" ? "accessibility-mode" : ""}`}>
       <Header title="Upload Complete" showBackButton />
       
-      <main className="flex-grow p-6 flex flex-col items-center justify-center">
+      {/* Fireworks animation */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <Fireworks
+          options={{
+            speed: 3,
+            acceleration: 1.05,
+            friction: 0.97,
+            gravity: 1.5,
+            particles: 50,
+            explosion: 5,
+            autoresize: true,
+            opacity: 0.5,
+            hue: {
+              min: 0,
+              max: 360
+            },
+            delay: {
+              min: 30,
+              max: 60
+            },
+            rocketsPoint: {
+              min: 50,
+              max: 50
+            },
+            lineWidth: {
+              explosion: {
+                min: 1,
+                max: 3
+              },
+              rocket: {
+                min: 1,
+                max: 2
+              }
+            },
+            lineStyle: {
+              rocket: {
+                cap: "round"
+              },
+              explosion: {
+                cap: "round"
+              }
+            }
+          }}
+        />
+      </div>
+      
+      <main className="flex-grow p-6 flex flex-col items-center justify-center relative z-10">
         <Card className="w-full max-w-md bg-white rounded-xl shadow-sm overflow-hidden border-0">
           {/* Header with gradient */}
           <div className="bg-uber-black p-8 flex flex-col items-center">

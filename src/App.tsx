@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -16,6 +15,8 @@ import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AccessibilityMode from "./pages/AccessibilityMode";
 import AccessibilityCamera from "./pages/AccessibilityCamera";
+import VoiceAgentPage from "./pages/VoiceAgentPage";
+import FinalPage from "./pages/FinalPage";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +37,8 @@ const App = () => (
               <Route path="/patients/:id" element={<ProtectedRoute><PatientDetail /></ProtectedRoute>} />
               <Route path="/accessibility-mode" element={<ProtectedRoute><AccessibilityMode /></ProtectedRoute>} />
               <Route path="/accessibility-camera" element={<ProtectedRoute><AccessibilityCamera /></ProtectedRoute>} />
+              <Route path="/voice-agent" element={<ProtectedRoute><VoiceAgentPage /></ProtectedRoute>} />
+              <Route path="/final" element={<ProtectedRoute><FinalPage /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
